@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Ciudad Mosaico Grado Cuarto</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Mundo único (juego): tablero de tinta azul sobre papel claro, acentos de tesela. HUD en las esquinas, diálogo abajo, retos en tarjeta central. */
+  --ink:#1b2a4a; --paper:#f6f9ff; --mango:#ffb703; --coral:#e5484d; --leaf:#0a9b6f; --sky:#118ab2; --mute:#5d6b86;
+  --display:"Baloo 2","Trebuchet MS",system-ui,sans-serif; --body:"Nunito","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:#b4b8bf;color:var(--ink);font-family:var(--body);font-weight:600;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+.btn{background:var(--mango);border:3px solid var(--ink);border-radius:14px;padding:10px 20px;font-family:var(--display);font-weight:800;font-size:1.1rem;box-shadow:0 4px 0 var(--ink);transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn.alt{background:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.box{background:var(--paper);border:3px solid var(--ink);border-radius:18px;box-shadow:0 6px 0 rgba(27,42,74,.85)}
+h1,h2,h3{font-family:var(--display);font-weight:800;margin:0;line-height:1.1;text-wrap:balance}
+
+/* HUD */
+#hud{position:fixed;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
+#hud>*{pointer-events:auto}
+.hud-l,.hud-r{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{background:var(--paper);border:3px solid var(--ink);border-radius:999px;padding:4px 14px;font-weight:800;font-size:.95rem;white-space:nowrap}
+#pips{display:flex;gap:4px;padding:6px 10px}
+#pips i{width:14px;height:14px;border-radius:4px;border:2px solid var(--ink);background:#c9ced8;display:block}
+.hbtn{white-space:nowrap;background:var(--paper);border:3px solid var(--ink);border-radius:12px;padding:5px 12px;font-weight:800;box-shadow:0 3px 0 var(--ink)}
+#goal{position:fixed;top:58px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;background:var(--ink);color:#fff;border-radius:999px;padding:6px 16px 6px 10px;font-weight:700;font-size:.95rem;max-width:calc(100% - 32px)}
+#goalArrow{flex:none;width:26px;height:26px;border-radius:50%;background:var(--mango);display:grid;place-items:center}
+#goalArrow::before{content:"";border:6px solid transparent;border-bottom:11px solid var(--ink);border-top:0;display:block}
+#mini{position:fixed;right:10px;top:58px;width:120px;height:120px;border:3px solid var(--ink);border-radius:16px;background:var(--paper)}
+#btnAct{position:fixed;right:18px;bottom:22px;font-size:1.15rem;padding:14px 22px;max-width:60vw}
+#stick{position:fixed;left:18px;bottom:22px;width:128px;height:128px;border-radius:50%;background:rgba(246,249,255,.55);border:3px solid var(--ink);touch-action:none}
+#knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px;border-radius:50%;background:var(--mango);border:3px solid var(--ink)}
+#keys{position:fixed;left:14px;bottom:14px;background:rgba(27,42,74,.82);color:#fff;border-radius:12px;padding:6px 12px;font-size:.85rem}
+
+/* Diálogo */
+#dialog{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);width:min(760px,calc(100% - 24px));padding:26px 20px 14px;cursor:pointer}
+#dlgWho{position:absolute;top:-18px;left:18px;background:var(--mango);border:3px solid var(--ink);border-radius:12px;padding:2px 14px;font-family:var(--display);font-weight:800;font-size:1.05rem}
+#dlgTxt{font-size:clamp(1rem,2.4vw,1.2rem);line-height:1.45;min-height:4.3em;margin:0;white-space:pre-wrap}
+#dlgNext{display:block;margin-left:auto;margin-top:6px;font-size:.95rem;padding:6px 16px}
+
+/* Capas */
+.veil{position:fixed;inset:0;display:grid;place-items:center;padding:12px;background:rgba(27,42,74,.45);overflow:auto}
+.card{width:min(680px,100%);max-height:calc(100% - 8px);overflow:auto;padding:20px}
+.eyebrow{font-size:.82rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:0 0 4px}
+.ctx{background:#fff;border:2px dashed var(--mute);border-radius:12px;padding:10px 14px;margin:10px 0;white-space:pre-wrap;line-height:1.4}
+.q{font-size:clamp(1.1rem,2.6vw,1.35rem);margin:8px 0 12px}
+.opts{display:grid;gap:10px}
+.opt{text-align:left;background:#fff;border:3px solid var(--ink);border-radius:14px;padding:11px 14px;font-weight:700;line-height:1.35;font-size:1rem;display:flex;gap:10px;align-items:flex-start}
+.opt b{flex:none;width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:.85rem}
+.opt:hover:not(:disabled){background:#fff6dc}
+.opt.ok{background:#d6f5e6;border-color:var(--leaf)} .opt.ok b{background:var(--leaf)}
+.opt.no{background:#fde2e2;border-color:var(--coral);opacity:.7} .opt.no b{background:var(--coral)}
+.fb{margin-top:12px;border-radius:12px;padding:10px 14px;line-height:1.4;font-weight:700}
+.fb.hint{background:#fff1c9;border:2px solid var(--mango)}
+.fb.good{background:#d6f5e6;border:2px solid var(--leaf)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end;margin-top:14px}
+.stars{font-size:1.5rem;letter-spacing:4px;color:var(--mango);-webkit-text-stroke:1.5px var(--ink);margin-right:auto}
+.slots{display:grid;gap:8px;margin-bottom:12px}
+.slot{border:3px dashed var(--mute);border-radius:12px;padding:9px 12px;min-height:46px;display:flex;gap:10px;align-items:center;font-weight:700;color:var(--mute)}
+.slot.full{border-style:solid;border-color:var(--ink);background:#fff;color:var(--ink)}
+.item{background:#fff;border:3px solid var(--ink);border-radius:14px;padding:16px;font-size:1.12rem;font-weight:800;text-align:center;margin:8px 0 12px;line-height:1.35}
+.cats{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.cats .opt{justify-content:center;text-align:center}
+.prog{height:10px;border-radius:99px;background:#dfe5f1;overflow:hidden;border:2px solid var(--ink)}
+.prog i{display:block;height:100%;background:var(--leaf);width:0;transition:width .25s}
+.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* Título y creador */
+#vTitle{background:linear-gradient(rgba(27,42,74,.05),rgba(27,42,74,.5))}
+#vTitle .card{text-align:center;width:min(520px,100%)}
+#vTitle h1{font-size:clamp(2.4rem,9vw,3.8rem)}
+#vTitle h1 span{color:var(--coral)}
+#vTitle p{margin:8px auto 16px;max-width:38ch;line-height:1.45}
+.tiles{display:flex;justify-content:center;gap:6px;margin:0 0 10px}
+.tiles i{width:22px;height:22px;border:3px solid var(--ink);border-radius:6px;display:block}
+.col{display:grid;gap:10px;justify-items:center}
+#creator{position:fixed;right:16px;top:50%;transform:translateY(-50%);width:min(360px,calc(100% - 32px));padding:18px;max-height:calc(100% - 24px);overflow:auto}
+#creator label,.lab{display:block;font-weight:800;font-size:.9rem;margin:12px 0 5px}
+#inName{width:100%;font:inherit;font-weight:800;font-size:1.1rem;padding:9px 12px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink);-webkit-user-select:text;user-select:text}
+.sw{display:flex;gap:7px;flex-wrap:wrap}
+.sw button{width:34px;height:34px;border-radius:50%;border:3px solid var(--ink);padding:0}
+.sw button.txt{width:auto;border-radius:10px;padding:0 11px;background:#fff;font-weight:800;font-size:.9rem}
+.sw button[aria-pressed="true"]{outline:4px solid var(--mango);outline-offset:1px}
+#crMsg{color:var(--coral);font-weight:800;min-height:1.3em;margin:8px 0 0}
+@media (max-width:720px){
+  #creator{right:50%;transform:translateX(50%);top:auto;bottom:10px;max-height:56%}
+  #hud{top:8px;left:8px;right:8px;gap:6px}
+  .hud-l,.hud-r{gap:5px} .hud-r{flex-wrap:nowrap}
+  .chip,.hbtn{font-size:.78rem;padding:3px 9px;border-width:2px} #pips{padding:5px 7px;gap:3px} #pips i{width:10px;height:10px;border-width:1.5px}
+  #chipName{max-width:104px;overflow:hidden;text-overflow:ellipsis}
+  #mini{width:88px;height:88px;top:78px;right:8px}
+  #goal{top:auto;bottom:168px;font-size:.85rem;border-radius:16px;width:max-content}
+  #toast{top:176px}
+}
+@media (pointer:fine){ #stick{display:none} }
+@media (pointer:coarse){ #keys{display:none} }
+
+/* Letrero de localización */
+#locBand{position:fixed;left:0;right:0;bottom:25%;pointer-events:none;text-align:center;padding:12px 0;opacity:0;transition:opacity .45s;
+ background:linear-gradient(100deg,rgba(64,48,110,0) 3%,rgba(64,48,110,.5) 24%,rgba(23,42,84,.6) 50%,rgba(64,48,110,.5) 76%,rgba(64,48,110,0) 97%)}
+#locBand::before,#locBand::after{content:"";position:absolute;left:5%;right:5%;height:2.5px;background:linear-gradient(90deg,transparent,#fff 16%,#fff 84%,transparent)}
+#locBand::before{top:0} #locBand::after{bottom:0}
+#locBand span{font-family:var(--display);font-weight:800;font-size:clamp(1.25rem,4vw,1.9rem);color:#fff;text-shadow:0 2px 8px rgba(20,25,60,.6);letter-spacing:.02em}
+#locBand.show{opacity:1}
+
+/* Cuaderno, juramento, diploma */
+.dsec{border-top:2px solid #d5dcea;padding:12px 0}
+.dsec h3{font-size:1.1rem;display:flex;gap:8px;align-items:center}
+.dsec h3 i{width:14px;height:14px;border-radius:4px;border:2px solid var(--ink);display:block;flex:none}
+.dsec dl{margin:8px 0 0}
+.dsec dt{font-weight:800} .dsec dd{margin:0 0 8px;line-height:1.4}
+.dim{color:var(--mute)}
+#oathTxt{width:100%;min-height:150px;font:inherit;padding:12px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink);line-height:1.45;resize:vertical;-webkit-user-select:text;user-select:text}
+.chk{list-style:none;padding:0;margin:10px 0;display:grid;gap:5px}
+.chk li{display:flex;gap:8px;align-items:center;font-weight:700}
+.chk li::before{content:"○";font-weight:800;color:var(--mute)}
+.chk li.y::before{content:"✓";color:var(--leaf)}
+#vCert .card{text-align:center;border-width:5px;background:linear-gradient(#fffdf5,#f6f9ff)}
+#certName{font-size:clamp(1.8rem,6vw,2.6rem);color:var(--sky);margin:6px 0}
+#certOath{text-align:left;background:#fff;border:2px solid #d5dcea;border-radius:12px;padding:12px;white-space:pre-wrap;line-height:1.45;font-style:italic;margin:12px 0;-webkit-user-select:text;user-select:text}
+#toast{position:fixed;left:50%;top:104px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 18px;border-radius:999px;font-weight:800;max-width:calc(100% - 32px);text-align:center}
+#banner{position:fixed;left:50%;top:22%;transform:translateX(-50%);text-align:center;padding:16px 28px;width:max-content;max-width:calc(100% - 32px);animation:pop .4s}
+#banner h2{font-size:clamp(1.5rem,5vw,2.2rem)}
+@keyframes pop{from{transform:translateX(-50%) scale(.6);opacity:0}}
+@media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<div id="hud" hidden>
+  <div class="hud-l"><span class="chip" id="chipName"></span><span class="chip" id="chipStars">★ 0</span><span class="chip" id="pips" aria-label="Teselas recuperadas"></span></div>
+  <div class="hud-r"><button class="hbtn" id="btnBook">Cuaderno</button><button class="hbtn" id="btnSnd">Con sonido</button></div>
+</div>
+<div id="goal" hidden><span id="goalArrow"></span><span id="goalTxt"></span></div>
+<canvas id="mini" width="240" height="240" hidden></canvas>
+<div id="keys" hidden>Muévete con las flechas o W A S D · Habla con E o Espacio</div>
+<div id="stick" hidden><div id="knob"></div></div>
+<button class="btn" id="btnAct" hidden></button>
+<div id="toast" hidden></div>
+<div id="banner" class="box" hidden><p class="eyebrow">Tesela recuperada</p><h2 id="banTxt"></h2></div>
+<div id="locBand" aria-hidden="true"><span id="locTxt"></span></div>
+
+<div id="dialog" class="box" hidden>
+  <span id="dlgWho"></span>
+  <p id="dlgTxt"></p>
+  <button class="btn" id="dlgNext">Siguiente</button>
+</div>
+
+<div class="veil" id="vTitle">
+  <div class="card box">
+    <div class="tiles" aria-hidden="true"><i style="background:#ef476f"></i><i style="background:#f77f00"></i><i style="background:#06a77d"></i><i style="background:#118ab2"></i><i style="background:#ffb703"></i><i style="background:#7b5cd6"></i></div>
+    <h1>Ciudad <span>Mosaico</span></h1>
+    <p>La Niebla Gris apagó los colores de Villa Mosaico. Recorre sus seis barrios, ayuda a sus habitantes y recupera las teselas perdidas.</p>
+    <div class="col">
+      <button class="btn" id="btnStart">Empezar aventura</button>
+      <button class="btn alt" id="btnReset" hidden>Empezar de nuevo</button>
+    </div>
+    <p class="dim" style="margin-bottom:0;font-size:.85rem">Ciencias Sociales · Grado cuarto · Gimnasio Domingo Savio</p>
+  </div>
+</div>
+<div id="nogl" class="veil" hidden><div class="card box"><h2>Este dispositivo no puede mostrar el juego en 3D</h2><p>Abre el enlace en un navegador actualizado (Chrome, Edge o Safari) y activa la aceleración gráfica.</p></div></div>
+
+<div id="creator" class="box" hidden>
+  <h2>Crea tu personaje</h2>
+  <label for="inName">¿Cómo te llamas?</label>
+  <input id="inName" maxlength="14" autocomplete="off" placeholder="Tu nombre">
+  <span class="lab">Tu título</span><div class="sw" id="swG"></div>
+  <span class="lab">Piel</span><div class="sw" id="swSkin"></div>
+  <span class="lab">Cabello</span><div class="sw" id="swHair"></div>
+  <span class="lab">Peinado</span><div class="sw" id="swStyle"></div>
+  <span class="lab">Camiseta</span><div class="sw" id="swShirt"></div>
+  <p id="crMsg"></p>
+  <button class="btn" id="btnGo" style="width:100%">¡Entrar a la ciudad!</button>
+</div>
+
+<div class="veil" id="vCh" hidden><div class="card box" id="chCard"></div></div>
+
+<div class="veil" id="vBook" hidden><div class="card box">
+  <p class="eyebrow">Lo que has aprendido</p><h2>Cuaderno de {g}</h2>
+  <div id="bookBody"></div>
+  <div class="row"><button class="btn" id="bookClose">Cerrar</button></div>
+</div></div>
+
+<div class="veil" id="vOath" hidden><div class="card box">
+  <p class="eyebrow">Reto final · Doña Ceiba</p><h2>Tu ensayo</h2>
+  <p class="q" style="font-family:var(--body);font-weight:700;font-size:1.05rem">Escribe un ensayo corto con tus propias palabras. Explica qué son las organizaciones internacionales que protegen los derechos humanos y por qué se crearon. Después di si estás a favor o en contra de ellas y da al menos dos argumentos.</p>
+  <textarea id="oathTxt" placeholder="Escribe aquí tu ensayo…"></textarea>
+  <ul class="chk" id="oathChk">
+    <li data-k="organizacion|organismo">Explicas qué son las organizaciones internacionales</li>
+    <li data-k="n2:onu|oea|cruz roja|amnistia|corte|oim|dih|unicef">Nombras al menos dos organizaciones</li>
+    <li data-k="guerra|crearon|creo |se crear|fundaron">Cuentas por qué se crearon</li>
+    <li data-k="a favor|en contra">Dices si estás a favor o en contra</li>
+    <li data-k="c2:porque|ademas|tambien|primero|segundo|otra razon|por ejemplo">Das al menos dos argumentos (usa «porque», «además»…)</li>
+    <li data-k="len:550">Escribes un texto completo (unos 12 renglones o más)</li>
+  </ul>
+  <div class="row"><button class="btn alt" id="oathBack">Volver</button><button class="btn" id="oathOk" disabled>Sellar el Mosaico</button></div>
+</div></div>
+
+<div class="veil" id="vCert" hidden><div class="card box">
+  <div class="tiles" aria-hidden="true"><i style="background:#ef476f"></i><i style="background:#f77f00"></i><i style="background:#06a77d"></i><i style="background:#118ab2"></i><i style="background:#ffb703"></i><i style="background:#7b5cd6"></i></div>
+  <p class="eyebrow">Villa Mosaico reconoce a</p>
+  <h2 id="certName"></h2>
+  <h3 id="certRank"></h3>
+  <p id="certStats" style="font-weight:800"></p>
+  <p class="eyebrow" style="text-align:left;margin-top:14px">Su ensayo</p>
+  <div id="certOath"></div>
+  <p class="dim" id="certDate" style="font-size:.9rem"></p>
+  <div class="row" style="justify-content:center"><button class="btn" id="certClose">Seguir explorando</button></div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ====== CIUDAD MOSAICO · GRADO CUARTO: barrios, personajes, lecciones y retos ====== */
+const DISTRICTS = [
+  {id:'espejos', name:'Barrio de los Derechos',      tema:'Competencias ciudadanas y derechos',          cx:-62, cz:-36, tint:'#ef476f'},
+  {id:'feria',   name:'Feria de las Regiones',       tema:'Relieve, regiones y pisos térmicos',          cx:0,   cz:-72, tint:'#f77f00'},
+  {id:'cano',    name:'Reserva Aguas Vivas',         tema:'Esferas del territorio y patrimonio natural', cx:62,  cz:-36, tint:'#06a77d'},
+  {id:'memoria', name:'Estación de las Naciones',    tema:'Organismos internacionales y derechos humanos', cx:62, cz:36, tint:'#118ab2'},
+  {id:'avenida', name:'Avenida del Espacio Público', tema:'Uso de los bienes públicos',                  cx:0,   cz:72,  tint:'#ffb703'},
+  {id:'parque',  name:'Parque de los Volcanes',      tema:'Placas tectónicas, cordilleras y costas',     cx:-62, cz:36,  tint:'#7b5cd6'}
+];
+
+const B = {
+  mosaic:{x:0,z:-7.5,w:8,d:2}, ceiba:{x:-10,z:-2,r:1.6}, lampA:{x:-8,z:8,r:.3}, lampB:{x:8,z:8,r:.3},
+  school:{x:-62,z:-53,w:18,d:7}, mir1:{x:-79,z:-44,r:1.2}, mir2:{x:-49,z:-49,r:1.2}, mir3:{x:-80,z:-24,r:1.2},
+  stage:{x:0,z:-88,w:14,d:6}, tent1:{x:-13,z:-79,r:2.4}, tent2:{x:13,z:-79,r:2.4}, tent3:{x:-15,z:-64,r:2.4},
+  river:{x:79,z:-38,w:6,d:70}, forest:{x:92,z:-38,w:14,d:70}, shed:{x:55,z:-55,w:8,d:6}, barrels:{x:61.5,z:-56,r:1},
+  station:{x:73,z:21,w:14,d:7}, loco:{x:74,z:49,w:9,d:3}, ban1:{x:86,z:30,r:1}, ban2:{x:88,z:38,r:1}, ban3:{x:84,z:42,r:1},
+  school2:{x:-19,z:61,w:12,d:6}, shelter:{x:19,z:71.6,w:5,d:1.6}, sgn1:{x:-5,z:73.3,r:.3}, sgn2:{x:5,z:73.3,r:.3}, sgn3:{x:13,z:73.3,r:.3}, stand:{x:13.5,z:64,w:3,d:2},
+  statue:{x:-11,z:56,r:1.4},
+  fountain:{x:-62,z:36,r:3}, kiosk:{x:-75,z:23,r:3.6}, bench1:{x:-56,z:30,w:2.4,d:.8}, bench2:{x:-66,z:41,w:2.4,d:.8}, swing:{x:-49,z:49,w:3.4,d:1.2},
+  volcano:{x:-47,z:23,r:3.4}, maqueta:{x:-58,z:21.5,w:4.6,d:2.8}
+};
+
+const SK = ['#f6d3b3','#e8b98f','#c98e62','#9b6642','#6b4329'];
+const HR = ['#1b1b1f','#4a2c17','#8a5a2b','#d9a441','#b5372c','#b9b9c2'];
+
+const CEIBA = {id:'ceiba', name:'Doña Ceiba', x:4, z:-2, look:{skin:SK[3],hair:HR[5],shirt:'#2a9d8f',pants:'#5a3d2b',style:1,acc:'none'}};
+
+const INTRO = [
+  '¡Por fin llegas, {n}! Soy Doña Ceiba, la cuidadora del Gran Mosaico. Te estaba esperando.',
+  'Villa Mosaico era la ciudad más colorida del Llano. La hicimos entre todos, como un mosaico: miles de piezas distintas que juntas forman algo hermoso.',
+  'Pero anoche llegó la Niebla Gris. Aparece cuando la gente olvida cómo es su territorio, deja de cuidar la naturaleza y los espacios de todos, y no defiende los derechos de las personas.',
+  'La niebla apagó los colores y arrancó las seis teselas del Gran Mosaico. Cada una cayó en un barrio distinto.',
+  'Tú vas a recuperarlas. En cada barrio hay un problema: habla con la gente, aprende qué está pasando y ayúdales a resolverlo.',
+  {s:'Chigüi', t:'¡Cuic, cuic! (Chigüi, el chigüiro más curioso de Villavicencio, decide acompañarte.)'},
+  'Sigue la flecha amarilla de arriba. Empieza por el Barrio de los Derechos. ¡Confío en ti, {g} del Mosaico!'
+];
+
+const NPCS = [
+/* ================= 1. BARRIO DE LOS DERECHOS ================= */
+{id:'ines', d:'espejos', role:'guide', name:'Profe Inés', x:-50, z:-29, look:{skin:SK[2],hair:HR[1],shirt:'#ef476f',style:1,acc:'glasses'},
+ lesson:[
+  '¡Hola, {n}! Qué bueno que llegas. Desde que cayó la niebla, en este barrio la gente se olvidó de sus derechos y de cómo participar.',
+  'Colombia es un país democrático. Eso quiere decir que los ciudadanos eligen a sus gobernantes con el VOTO. Votar es un derecho y una forma de participar.',
+  'Los niños y las niñas tienen derechos especiales: a la vida, a la salud, a la buena alimentación, a la educación, a tener una familia y a recibir amor y cuidado.',
+  'Colombia también es un país DIVERSO: aquí viven pueblos indígenas, comunidades afrodescendientes, raizales, el pueblo gitano y campesinos. Cada grupo tiene derecho a conservar su cultura.',
+  'La Constitución dice que el Estado y la sociedad deben proteger las RIQUEZAS CULTURALES de la Nación: casas antiguas, lenguas, músicas, tradiciones.',
+  'Y cuando una comunidad toma una decisión, hay que escuchar los INTERESES de todos. Una decisión puede favorecer a unos y no a otros. Busca a quienes tienen el signo amarillo.'],
+ notes:[
+  ['Democracia y voto','Los ciudadanos eligen a sus gobernantes votando. Votar es un derecho y una forma de participar.'],
+  ['Derechos de los niños','Vida, salud, buena alimentación, educación, tener una familia, amor y cuidado.'],
+  ['Diversidad cultural','Indígenas, afrodescendientes, raizales, gitanos y campesinos tienen derecho a conservar su cultura.'],
+  ['Riquezas culturales','El Estado y la sociedad deben protegerlas: casas antiguas, lenguas, tradiciones.'],
+  ['Intereses','Antes de decidir hay que escuchar lo que quiere cada persona.']]},
+{id:'amparo', d:'espejos', name:'Doctora Amparo', x:-55, z:-41, look:{skin:SK[1],hair:HR[0],shirt:'#f4f1de',style:1},
+ intro:['Soy la médica del barrio. Todos los días veo situaciones en las que alguien protege a un niño.','¿Me ayudas a reconocer qué derecho se está cuidando en cada caso?'],
+ ch:{type:'classify', q:'¿Qué derecho del niño se protege en cada caso?', cats:['Buena alimentación','Educación','Salud','Familia, amor y cuidado'],
+  items:[['La abuela le prepara a Tomás un almuerzo con frutas, verduras y carne.',0],['Una niña de una vereda lejana recibe un bus gratis para llegar al colegio.',1],['Llevan a un bebé al puesto de salud para vacunarlo.',2],['Un niño que perdió a sus papás es adoptado por una familia que lo quiere.',3],['El colegio da refrigerio a los niños que llegan sin desayunar.',0],['Una profesora va hasta la vereda a enseñar a leer.',1]],
+  why:'Todos estos derechos son de los niños y las niñas. Los adultos, la familia y el Estado tienen el deber de protegerlos.'},
+ after:'¡Muy bien! Un niño bien alimentado, sano y querido puede aprender y crecer feliz.'},
+{id:'octavio', d:'espejos', name:'Don Octavio', x:-64, z:-43, look:{skin:SK[2],hair:HR[5],shirt:'#3d5a80',style:0,acc:'hat'},
+ intro:['Soy jurado de votación. Escucha lo que dijo la alcaldesa ayer por la radio.'],
+ ch:{type:'quiz', ctx:'«Se acercan las elecciones. Sin importar por quién piensen votar, salgan el domingo y elijan. Así quien gane los representará de verdad.»',
+  q:'¿Qué busca la alcaldesa con su mensaje?',
+  opts:['Que todos los ciudadanos participen votando en las elecciones.','Que solo voten las personas que apoyan a su partido.','Que la gente se quede en casa para evitar filas.','Que los candidatos se pongan de acuerdo para no competir.'],
+  hint:'La alcaldesa no dice por quién votar. Fíjate en qué les pide a TODOS.',
+  why:'Votar es un derecho democrático. Cuando todos votan, los gobernantes elegidos representan de verdad a la mayoría de la gente.',
+  note:['El voto','Votar es un derecho: así los ciudadanos eligen a quienes los representan.']},
+ after:'Así es. ¡El domingo los espero a todos en la mesa de votación!'},
+{id:'hugo', d:'espejos', name:'Don Hugo', x:-73, z:-38, look:{skin:SK[3],hair:HR[0],shirt:'#06a77d',style:0,acc:'glasses'},
+ intro:['Soy el presidente de la Junta de Acción Comunal. El parque del barrio está muy oscuro de noche y la gente tiene miedo de pasar por ahí.','Hicimos una reunión y cada vecino dio su opinión. Mira lo que anoté.'],
+ ch:{type:'quiz', ctx:'Don Raúl: «Hay que pedir más policías para el parque».\nDoña Elsa: «Hagamos una colecta entre los vecinos y compremos lámparas».\nAndrea: «Los vecinos no deben poner ni un peso. Eso lo tiene que pagar la Alcaldía».\n\nDecisión final: hacer una colecta entre los vecinos para comprar lámparas.',
+  q:'¿Los intereses de quién van EN CONTRA de la decisión que se tomó?',
+  opts:['De Andrea, porque ella no quería que los vecinos pusieran dinero.','De Doña Elsa, porque ella propuso la colecta.','De Don Raúl, porque las lámparas también son de la policía.','De nadie, porque todos pidieron exactamente lo mismo.'],
+  hint:'Busca a la persona que dijo que los vecinos NO debían pagar.',
+  why:'La decisión fue una colecta entre vecinos. Eso es justo lo contrario de lo que pedía Andrea. Analizar los intereses de cada persona ayuda a tomar decisiones más justas.'},
+ after:'Tienes razón. Voy a hablar con Andrea para ver cómo la incluimos en la solución.'},
+{id:'kelly', d:'espejos', name:'Kelly', x:-72, z:-28, look:{skin:SK[4],hair:HR[0],shirt:'#ffb703',style:3,kid:1},
+ intro:['En mi colegio estudiamos niños indígenas y niños afrodescendientes como yo.','Las directivas crearon una clase de lengua y tradiciones indígenas. ¡Qué bueno! Pero de nuestra cultura afro no hay nada, y mi familia se siente olvidada.'],
+ ch:{type:'quiz', q:'¿Por qué tiene razón la familia de Kelly?',
+  opts:['Porque las comunidades afrodescendientes también tienen derecho a que su cultura e identidad se reconozcan y se enseñen.','Porque todas las comunidades tienen exactamente las mismas tradiciones y deben tomar la misma clase.','Porque los niños afrodescendientes no necesitan aprender sobre su propia cultura.','Porque en Colombia está prohibido enseñar sobre culturas en el colegio.'],
+  hint:'Piensa en lo que dijo la Profe Inés: cada grupo tiene derecho a conservar su cultura.',
+  why:'Colombia reconoce y protege su diversidad. Indígenas y afrodescendientes tienen culturas distintas, y las dos merecen ser reconocidas para que pasen de una generación a otra.',
+  note:['Reconocer la diversidad','Cada comunidad tiene derecho a que su cultura se reconozca, sin dejar a ninguna por fuera.']},
+ after:'¡Gracias! Vamos a proponer una clase de música y danzas del Pacífico.'},
+{id:'jairo', d:'espejos', name:'Jairo, el guía del museo', x:-63, z:-24, look:{skin:SK[1],hair:HR[2],shirt:'#7b5cd6',style:0,acc:'cap'},
+ intro:['Trabajo en el museo del barrio. La Constitución dice que debemos proteger las riquezas culturales de la Nación.','Pero no todos lo están cumpliendo. ¿Me ayudas a revisar estas noticias?'],
+ ch:{type:'classify', q:'¿En cada noticia se protegen o no las riquezas culturales?', cats:['Se protegen','No se protegen'],
+  items:[['Prohíben tumbar una casa de 200 años donde vivió un prócer de la independencia.',0],['Obligan a una comunidad indígena a dejar de hablar su lengua.',1],['Restauran una iglesia colonial y la abren como museo.',0],['Botan a la basura los tambores antiguos de una comunidad afro.',1],['Graban a los abuelos contando mitos y leyendas para que no se olviden.',0],['Construyen un parqueadero encima de un sitio arqueológico.',1]],
+  why:'Proteger las riquezas culturales es cuidar lo que nos cuenta quiénes somos: edificios históricos, lenguas, instrumentos, relatos. Destruirlos u obligar a abandonarlos es lo contrario.'},
+ after:'¡Perfecto! Pegaré tus respuestas en la cartelera del museo.'},
+
+/* ================= 2. FERIA DE LAS REGIONES ================= */
+{id:'ruperto', d:'feria', role:'guide', name:'Don Ruperto', x:3, z:-59, look:{skin:SK[2],hair:HR[5],shirt:'#f4f1de',style:0,acc:'hat'},
+ lesson:[
+  '¡Epa, {n}! Soy Ruperto. He recorrido Colombia entera vendiendo arepas. Con la niebla, la gente de la feria ya no sabe ni de dónde viene.',
+  'El RELIEVE son las formas de la superficie de la tierra. Te enseño las más importantes.',
+  'La LLANURA es una tierra plana y baja, como los Llanos Orientales, donde estamos, o la llanura del Caribe.',
+  'El VALLE es una zona baja y plana entre montañas, formada por un río. Los valles del Magdalena y del Cauca están entre las cordilleras: por eso se llaman valles interandinos.',
+  'La MESETA es una tierra plana en lo alto. Si es muy alta y extensa, entre montañas, se llama ALTIPLANO, como el altiplano cundiboyacense, donde queda Bogotá.',
+  'En Colombia la temperatura cambia sobre todo por la ALTITUD, la altura sobre el nivel del mar. Mientras más alto, más frío. A eso se le llama PISOS TÉRMICOS.',
+  'Y algo más: las montañas, llanuras y selvas separaron a la gente durante mucho tiempo. Por eso cada región creó su acento, su música y su comida.'],
+ notes:[
+  ['Llanura','Tierra plana y baja: Llanos Orientales, llanura del Caribe.'],
+  ['Valle interandino','Zona baja y plana entre cordilleras, formada por un río: valles del Magdalena y del Cauca.'],
+  ['Meseta y altiplano','Tierra plana en lo alto. El altiplano es una meseta muy alta y extensa entre montañas.'],
+  ['Pisos térmicos','La temperatura cambia con la altitud: mientras más alto, más frío.'],
+  ['Relieve y cultura','El relieve separó a los grupos humanos y cada región creó sus propias costumbres.']]},
+{id:'isabela', d:'feria', name:'Isabela', x:-8, z:-68, look:{skin:SK[1],hair:HR[1],shirt:'#ef476f',style:2,kid:1},
+ intro:['Estoy haciendo un álbum del relieve de Colombia, pero se me revolvieron las fichas. ¿Me ayudas a ordenarlas?'],
+ ch:{type:'classify', q:'¿Qué forma del relieve describe cada ficha?', cats:['Llanura','Valle','Altiplano','Montaña'],
+  items:[['Tierra plana y baja con sabanas, donde el horizonte se ve muy lejos.',0],['Zona plana entre dos cordilleras, con un río grande en el medio.',1],['Terreno plano a 2.600 metros de altura, rodeado de montañas.',2],['Elevación muy alta, con picos y laderas empinadas.',3],['Planicie baja que llega hasta el mar Caribe.',0],['Tierra plana que formó el río Cauca entre las montañas.',1]],
+  why:'Llanura: plana y baja. Valle: plano y bajo, entre montañas y formado por un río. Altiplano: plano pero muy alto. Montaña: elevación con pendientes.'},
+ after:'¡Mi álbum quedó perfecto! Te regalo una ficha repetida.'},
+{id:'juliana', d:'feria', name:'Juliana', x:-5, z:-58, look:{skin:SK[2],hair:HR[0],shirt:'#06a77d',style:2,kid:1},
+ intro:['Mi primo Felipe vino a la feria. Él vive en un lugar muy distinto al mío.'],
+ ch:{type:'quiz', ctx:'Juliana vive a 300 metros de altura, en una tierra plana inmensa con sabanas, morichales y pocos habitantes.\nFelipe vive a 1.000 metros, en una tierra plana formada por un río y rodeada de montañas por los dos lados.',
+  q:'¿En qué forma del relieve vive cada uno?',
+  opts:['Juliana en la llanura de los Llanos Orientales y Felipe en un valle interandino.','Juliana en un altiplano y Felipe en la llanura del Caribe.','Juliana en un valle interandino y Felipe en los Llanos Orientales.','Juliana en una meseta y Felipe en un páramo.'],
+  hint:'Una vive en tierra baja y plana con sabanas. El otro vive entre montañas, junto a un río.',
+  why:'Las sabanas planas y bajas son típicas de la llanura de los Llanos Orientales. Una tierra plana formada por un río entre montañas es un valle interandino.'},
+ after:'¡Eso! Felipe vive en el valle del Magdalena. ¡Ahora sí entiendo por qué allá hace tanto calor y hay montañas a los lados!'},
+{id:'ramiro', d:'feria', name:'Abuelo Ramiro', x:0, z:-78, look:{skin:SK[3],hair:HR[5],shirt:'#8d6e63',style:0,acc:'hat'},
+ intro:['De joven fui arriero. Subía con las mulas desde tierra caliente hasta el páramo, y en cada tramo del camino cambiaba la ropa que llevaba.'],
+ ch:{type:'order', q:'Ordena los pisos térmicos desde el más bajo y caliente hasta el más alto y frío.',
+  items:['Cálido, como Villavicencio','Templado','Frío, como Bogotá','Páramo','Nieves perpetuas'],
+  hint:'Imagina que subes una montaña: cada vez hace más frío.',
+  why:'Los pisos térmicos van de abajo hacia arriba: cálido, templado, frío, páramo y nieves perpetuas. Mientras más alto, más baja la temperatura.',
+  note:['Orden de los pisos térmicos','Cálido → templado → frío → páramo → nieves perpetuas.']},
+ after:'¡Así mismo era! Abajo con camisa de manga corta y arriba con ruana y sombrero.'},
+{id:'carlos', d:'feria', name:'Carlos, el conductor', x:12, z:-62, look:{skin:SK[1],hair:HR[0],shirt:'#118ab2',style:4},
+ intro:['Manejo el bus de la feria. Esta mañana salí de Villavicencio con un calor tremendo y al mediodía ya estaba en el páramo de Sumapaz, temblando de frío.','Los dos lugares están casi igual de cerca de la línea del Ecuador. Entonces, ¿por qué cambió tanto la temperatura?'],
+ ch:{type:'quiz', q:'¿Qué explica mejor el cambio de temperatura en el viaje de Carlos?',
+  opts:['La altitud: el páramo está mucho más alto sobre el nivel del mar.','La latitud: el páramo está mucho más lejos de la línea del Ecuador.','Los ríos: el agua de las montañas enfría el aire.','La población: en el páramo vive menos gente y por eso hace frío.'],
+  hint:'Carlos ya te dijo que los dos lugares están casi igual de cerca del Ecuador. ¿Qué cambió entonces?',
+  why:'Colombia está cerca del Ecuador, así que la latitud casi no cambia entre sus regiones. Lo que más cambia es la altitud: al subir, la temperatura baja.'},
+ after:'Con razón. ¡La próxima vez llevo chaqueta!'},
+{id:'chepa', d:'feria', name:'Doña Chepa', x:9, z:-69, look:{skin:SK[2],hair:HR[0],shirt:'#f77f00',style:1,acc:'apron'},
+ intro:['En mi carpa venden juntos una cocinera costeña, un llanero y una señora de los Andes. Cada uno habla con su acento, toca su música y cocina sus platos.','Un turista me preguntó por qué Colombia tiene culturas tan distintas en cada región, y no supe qué contestarle.'],
+ ch:{type:'quiz', q:'¿Qué le debería responder Doña Chepa al turista?',
+  opts:['Que las montañas, llanuras y selvas separaron a los grupos humanos por mucho tiempo y cada uno creó sus costumbres.','Que cada departamento está obligado por ley a tener una cultura diferente.','Que Colombia es un Estado federal y cada región hace sus propias leyes.','Que cada región fue fundada por un país extranjero distinto.'],
+  hint:'Recuerda lo último que dijo Don Ruperto sobre el relieve.',
+  why:'El relieve aisló a las poblaciones durante siglos. Así nacieron culturas regionales distintas. Ojo: Colombia es una república unitaria, no un Estado federal.',
+  note:['¿Por qué tantas culturas?','El relieve separó a los grupos humanos y cada uno desarrolló su acento, música y comida.']},
+ after:'¡Esa es la respuesta! Se la voy a contar con una hayaca en la mano.'},
+
+/* ================= 3. RESERVA AGUAS VIVAS ================= */
+{id:'rosalba', d:'cano', role:'guide', name:'Doña Rosalba', x:50, z:-29, look:{skin:SK[2],hair:HR[1],shirt:'#06a77d',style:1,acc:'hat'},
+ lesson:[
+  '¡{n}, llegaste! Soy Rosalba, la cuidadora de la reserva. Mira cómo la dejó la niebla.',
+  'Para entender un territorio hay que conocer sus cinco ESFERAS. Todas se relacionan entre sí.',
+  'La LITOSFERA son las rocas, el suelo y las montañas. La HIDROSFERA es el agua: ríos, lagos, mares y lluvia. La ATMÓSFERA es el aire que rodea la Tierra y el clima.',
+  'La BIOSFERA son todos los seres vivos: plantas y animales. Y la ANTROPOSFERA somos los seres humanos y lo que construimos: casas, cultivos, ciudades.',
+  'Esta reserva es PATRIMONIO NATURAL: bosques, ríos y animales que heredamos y debemos cuidar para los que vienen.',
+  'Una constructora taló gran parte del bosque para hacer casas. Sin árboles, el suelo se lava, el caño se seca y los animales se van. Ayuda a mis amigos a recuperarla.'],
+ notes:[
+  ['Litosfera','Rocas, suelo y montañas.'],
+  ['Hidrosfera','El agua: ríos, lagos, mares y lluvia.'],
+  ['Atmósfera','El aire que rodea la Tierra y el clima.'],
+  ['Biosfera','Todos los seres vivos: plantas y animales.'],
+  ['Antroposfera','Los seres humanos y lo que construyen: casas, cultivos, ciudades.'],
+  ['Patrimonio natural','Bosques, ríos, páramos y animales que heredamos y debemos cuidar.']]},
+{id:'chucho', d:'cano', name:'Chucho, el pescador', x:71, z:-44, look:{skin:SK[3],hair:HR[0],shirt:'#118ab2',style:0,acc:'hat'},
+ intro:['Llevo cuarenta años pescando en este caño. Todo lo que ves aquí pertenece a alguna esfera. ¿Sabes a cuál?'],
+ ch:{type:'classify', q:'¿A qué esfera pertenece cada cosa?', cats:['Litosfera','Hidrosfera','Atmósfera','Biosfera','Antroposfera'],
+  items:[['Las rocas y el suelo de la montaña',0],['El caño y la lluvia',1],['El aire que respiramos y las nubes',2],['Las garzas, los peces y los árboles',3],['Las casas y los cultivos de la vereda',4],['La arena de la orilla',0],['El viento que trae la tormenta',2]],
+  why:'Suelo y rocas: litosfera. Agua: hidrosfera. Aire y clima: atmósfera. Seres vivos: biosfera. Las personas y lo que construyen: antroposfera.'},
+ after:'¡Eres más rápido que un bagre! Ya conoces las cinco esferas.'},
+{id:'tomas', d:'cano', name:'Tomás', x:70, z:-30, look:{skin:SK[2],hair:HR[2],shirt:'#ffb703',style:0,kid:1},
+ intro:['Este verano casi no llovió. El caño se secó y se murieron muchos peces. Las garzas se fueron a otro lado.'],
+ ch:{type:'quiz', q:'¿Qué esferas se relacionan directamente en lo que cuenta Tomás?',
+  opts:['La hidrosfera (el caño seco) y la biosfera (los peces y las garzas).','La litosfera (el caño) y la antroposfera (los peces).','La atmósfera (los peces) y la litosfera (las garzas).','La antroposfera (el caño) y la hidrosfera (las garzas).'],
+  hint:'¿A qué esfera pertenece el agua? ¿Y los animales?',
+  why:'El caño es agua, así que es hidrosfera. Los peces y las garzas son seres vivos, así que son biosfera. Cuando falla una esfera, las demás también se afectan.'},
+ after:'Ahora entiendo: si el agua falta, los animales sufren. Todo está conectado.'},
+{id:'marcela', d:'cano', name:'Guardabosques Marcela', x:60, z:-22, look:{skin:SK[0],hair:HR[2],shirt:'#588157',style:1,acc:'hat'},
+ intro:['Soy la guardabosques. Cerca de aquí había un bosque con un caño que daba agua a monos, aves y venados. Los vecinos venían a caminar y a respirar aire limpio.','Una empresa cortó cientos de árboles para hacer un parqueadero y ahora el suelo se está lavando con cada aguacero.'],
+ ch:{type:'quiz', q:'¿Cuál es el problema que daña directamente el patrimonio natural de la reserva?',
+  opts:['El corte de muchos árboles del bosque.','Que los vecinos quieran sembrar árboles nuevos.','Que en la reserva nunca hayan existido plantas.','Que se acabó el oxígeno de todo el planeta.'],
+  hint:'Busca la acción que Marcela contó: ¿qué le hicieron al bosque?',
+  why:'La tala sin control es el daño directo. Sin árboles se pierden el hogar de los animales, el agua del caño y el suelo fértil. Sembrar árboles, en cambio, ayuda.',
+  note:['Daño al patrimonio natural','La tala indiscriminada destruye el bosque, el agua y el hogar de los animales.']},
+ after:'Exacto. Ahora hay que convencer a la gente de recuperar el bosque.'},
+{id:'lina', d:'cano', name:'Lina', x:58, z:-38, look:{skin:SK[3],hair:HR[0],shirt:'#f77f00',style:2,kid:1},
+ intro:['Mi amigo Julio y yo queremos hacer una campaña para recuperar el bosque de la reserva y que los vecinos lo valoren.','Necesitamos un buen lema para los carteles.'],
+ ch:{type:'quiz', q:'¿Qué lema le queda mejor a la campaña de Lina y Julio?',
+  opts:['«Sembremos árboles nativos: el bosque es la casa del agua y de los animales.»','«Compremos más carros para llegar rápido a la reserva.»','«Apoyemos al equipo de fútbol de la vereda con una rifa.»','«Separemos bien el reciclaje de la cocina.»'],
+  hint:'El lema debe hablar de lo que quieren lograr: recuperar el bosque.',
+  why:'Un buen lema dice con claridad qué se quiere proteger y por qué. Reciclar es bueno, pero no habla del bosque talado, que es el problema de esta campaña.'},
+ after:'¡Ese es! Mañana pintamos los carteles en la escuela.'},
+
+/* ================= 4. ESTACIÓN DE LAS NACIONES ================= */
+{id:'clara', d:'memoria', role:'guide', name:'Embajadora Clara', x:51, z:29, look:{skin:SK[1],hair:HR[3],shirt:'#3d5a80',style:1},
+ lesson:[
+  'Bienvenido a la Estación de las Naciones, {n}. Soy Clara, embajadora. A esta estación llegan trenes de todo el mundo, pero la niebla confundió a todos.',
+  'Hace muchos años hubo guerras terribles. En la Segunda Guerra Mundial, que terminó en 1945, murieron millones de personas.',
+  'Por eso los países decidieron crear organizaciones internacionales: para que algo así no se repitiera y para proteger los DERECHOS HUMANOS.',
+  'La ONU reúne a casi todos los países del mundo para cuidar la paz. También envía ayuda humanitaria (comida, agua, médicos) cuando hay desastres.',
+  'La OEA reúne a los países de América para dialogar y llegar a acuerdos pacíficos. La CORTE IDH es un tribunal para los países americanos: cuando un Estado viola los derechos de una persona, sus sentencias son obligatorias.',
+  'El DIH, Derecho Internacional Humanitario, pone límites a la guerra para proteger a civiles, heridos y prisioneros. La Cruz Roja ayuda a que se cumpla.',
+  'AMNISTÍA INTERNACIONAL es una ONG: no pertenece a ningún gobierno. Investiga y denuncia abusos en cualquier país. Y la OIM ayuda a las personas migrantes. ¡Ve a ayudar a los viajeros!'],
+ notes:[
+  ['¿Por qué se crearon?','Después de guerras terribles, como la Segunda Guerra Mundial, para proteger la paz y los derechos humanos.'],
+  ['ONU','Reúne a casi todos los países. Cuida la paz y envía ayuda humanitaria.'],
+  ['OEA','Reúne a los países de América para dialogar y buscar acuerdos pacíficos.'],
+  ['Corte IDH','Tribunal para los países americanos. Sus sentencias son obligatorias.'],
+  ['DIH y Cruz Roja','Límites a la guerra para proteger a civiles, heridos y prisioneros.'],
+  ['Amnistía Internacional','ONG independiente que investiga y denuncia abusos en cualquier país.'],
+  ['OIM','Ayuda a las personas migrantes.']]},
+{id:'emilia', d:'memoria', name:'Emilia, la traductora', x:60, z:32, look:{skin:SK[1],hair:HR[1],shirt:'#b56576',style:1,acc:'glasses'},
+ intro:['Soy traductora. Llegaron mensajes de varias organizaciones, pero se les borró el nombre. ¿Me ayudas a saber de quién es cada uno?'],
+ ch:{type:'classify', q:'¿Qué organismo hace cada cosa?', cats:['ONU','OEA','Corte IDH','OIM'],
+  items:[['Envía comida, agua y médicos a un país después de un huracán.',0],['Reúne a los presidentes de América para dialogar sobre un problema de frontera.',1],['Dicta una sentencia obligatoria contra un país americano que violó los derechos de una persona.',2],['Ayuda a una familia que tuvo que salir de su país a conseguir refugio y papeles.',3],['Organiza una asamblea con casi todos los países del mundo para hablar de paz.',0],['Juzga a un Estado de América que no protegió a una comunidad.',2]],
+  why:'La ONU trabaja con casi todo el mundo y da ayuda humanitaria. La OEA une a América para dialogar. La Corte IDH juzga a los Estados americanos. La OIM ayuda a los migrantes.'},
+ after:'¡Listo! Ya puedo entregar cada mensaje en su vagón.'},
+{id:'jacinto', d:'memoria', name:'Enfermero Jacinto', x:70, z:33, look:{skin:SK[4],hair:HR[0],shirt:'#f4f1de',style:0},
+ intro:['Soy enfermero voluntario. En un país lejano hay una guerra entre dos ejércitos.','Hay una escuela donde se refugian niños y familias campesinas, y donde atendemos a soldados heridos de los dos bandos.'],
+ ch:{type:'quiz', q:'¿Por qué ninguno de los dos ejércitos puede atacar esa escuela?',
+  opts:['Porque el Derecho Internacional Humanitario pone límites a la guerra para proteger a civiles, heridos y prisioneros.','Porque la OEA es la dueña de todas las escuelas del mundo.','Porque Amnistía Internacional es la que manda a los ejércitos.','Porque la OIM prohíbe que existan guerras en cualquier lugar.'],
+  hint:'Una de las opciones habla de reglas para la guerra.',
+  why:'Incluso en una guerra hay reglas. El DIH prohíbe atacar a civiles, a heridos y a prisioneros, y protege escuelas y hospitales. La Cruz Roja ayuda a que se cumpla.',
+  note:['El DIH protege','A civiles, heridos y prisioneros, aunque haya guerra.']},
+ after:'Así es. Gracias a esas reglas, la escuela sigue siendo un lugar seguro.'},
+{id:'nubia', d:'memoria', name:'Nubia, la periodista', x:64, z:43, look:{skin:SK[2],hair:HR[4],shirt:'#06a77d',style:2},
+ intro:['Soy periodista. Te cuento un caso que me tiene preocupada.'],
+ ch:{type:'quiz', ctx:'En un país donde no hay guerra, encarcelaron a una maestra por escribir en internet que el gobierno no arregla las escuelas. Una organización investigó el caso y lo contó al mundo. Ahora personas de muchos países firman cartas pidiendo su libertad.',
+  q:'¿Qué organización hace este tipo de investigaciones y campañas, sin importar qué gobierno cometa el abuso?',
+  opts:['Amnistía Internacional, una ONG que investiga y denuncia abusos en cualquier país.','La Cruz Roja, porque ayuda en los países que están en guerra.','La Corte IDH, porque juzga a los gobiernos de todo el planeta.','La OEA, porque solo busca acuerdos entre los países de América.'],
+  hint:'En este país no hay guerra. Y la organización no es un tribunal: hace campañas y cartas.',
+  why:'Amnistía Internacional no depende de ningún gobierno. Investiga violaciones de derechos humanos en cualquier lugar y organiza campañas para presionar. La Corte IDH solo juzga a Estados americanos.'},
+ after:'¡Exacto! Voy a escribir sobre eso para que más gente firme.'},
+{id:'teresa', d:'memoria', name:'Teresa, la abogada', x:55, z:42, look:{skin:SK[3],hair:HR[0],shirt:'#ef476f',style:1},
+ intro:['Soy abogada. Tengo un cliente en un país de Suramérica. Unos funcionarios del gobierno le quitaron su finca de forma ilegal.','Lo demostró con papeles, pero los jueces de su país no quisieron escucharlo.'],
+ ch:{type:'quiz', q:'¿Ante quién puede llevar su caso para que haya una decisión obligatoria para ese país?',
+  opts:['Ante la Corte Interamericana de Derechos Humanos, que juzga a los Estados americanos que violan derechos.','Ante la ONU, porque reúne a casi todos los países para hablar de paz.','Ante Amnistía Internacional, porque es un tribunal que dicta sentencias.','Ante la Cruz Roja, porque defiende a quienes pierden su casa.'],
+  hint:'Busca un tribunal (un juez) que sea para los países de América.',
+  why:'La Corte IDH es un tribunal. Cuando un Estado americano viola los derechos de una persona y la justicia del país no responde, la Corte puede dictar una sentencia que el país debe cumplir.'},
+ after:'Perfecto. Preparo los papeles para la Corte esta misma semana.'},
+{id:'hernan', d:'memoria', name:'Profe Hernán', x:52, z:36, look:{skin:SK[1],hair:HR[2],shirt:'#7b5cd6',style:0,acc:'glasses'},
+ intro:['Doy clase de historia. Mis estudiantes siempre preguntan: «¿Y para qué se inventaron todas esas organizaciones?»'],
+ ch:{type:'quiz', q:'¿Por qué se crearon la mayoría de las organizaciones internacionales de derechos humanos?',
+  opts:['Porque después de guerras terribles, como la Segunda Guerra Mundial, los países quisieron proteger la paz y los derechos humanos.','Porque los países querían juntarse en un solo gobierno y quitar a todos los presidentes.','Porque querían organizar campeonatos deportivos entre las naciones.','Porque necesitaban cobrarle impuestos a todos los habitantes del planeta.'],
+  hint:'Recuerda lo que contó la Embajadora Clara al principio.',
+  why:'Las guerras mundiales dejaron millones de víctimas. Para evitar que se repitiera, los países crearon organizaciones como la ONU, en 1945, y se comprometieron a proteger los derechos humanos.'},
+ after:'¡Muy bien! Esa respuesta te va a servir para tu ensayo final.'},
+{id:'mariana', d:'memoria', name:'Mariana', x:58, z:25, look:{skin:SK[0],hair:HR[3],shirt:'#ffb703',style:2,kid:1},
+ intro:['Doña Ceiba dice que al final hay que escribir un ensayo y decir si estás a favor o en contra de estas organizaciones, con argumentos.','Yo encontré estas ideas. ¿Me ayudas a separarlas?'],
+ ch:{type:'classify', q:'¿Cada idea es un argumento A FAVOR o EN CONTRA de los organismos internacionales?', cats:['A favor','En contra'],
+  items:[['Llevan comida y médicos cuando un país sufre un desastre.',0],['A veces tardan muchos años en resolver un caso.',1],['Protegen a personas a las que su propio país no escuchó.',0],['Algunos países no cumplen lo que estos organismos deciden.',1],['Ayudan a que los países dialoguen en vez de pelear.',0],['Hay gobiernos que sienten que se meten en sus decisiones.',1]],
+  why:'Un argumento es una razón que apoya lo que piensas. En tu ensayo escoge una posición y apóyala con al menos dos razones como estas.',
+  note:['Argumentar','Escoge una posición (a favor o en contra) y da al menos dos razones que la apoyen.']},
+ after:'¡Gracias! Ya tengo ideas para escribir mi ensayo.'},
+
+/* ================= 5. AVENIDA DEL ESPACIO PÚBLICO ================= */
+{id:'paola', d:'avenida', role:'guide', name:'Agente Paola', x:4, z:61, look:{skin:SK[2],hair:HR[0],shirt:'#2d6a4f',style:0,acc:'cap'},
+ lesson:[
+  '¡Hola, {n}! Soy la agente Paola, del espacio público. Desde que llegó la niebla, cada quien se adueña de lo que es de todos.',
+  'En la ciudad hay espacios con distintos niveles de acceso.',
+  'El ESPACIO PÚBLICO es de todos y del Estado: parques, plazas, calles. Su acceso es libre y colectivo, y el Estado se encarga de mantenerlo. Nadie puede cerrarlo ni cobrar por entrar.',
+  'El ESPACIO PRIVADO pertenece a una persona o una familia, como tu casa o tu cuarto. Solo se entra con permiso.',
+  'Los ESPACIOS DE TRANSICIÓN, como los andenes o aceras, unen lo privado con lo público. Son de uso colectivo, así que nadie puede llenarlos con sus cosas.',
+  'Las rejas, muros y cercas son FRONTERAS. Una reja baja es una frontera visual: deja mirar, pero no deja entrar.',
+  'En los parques, los árboles son el PULMÓN VERDE de la ciudad. Las estatuas y monumentos son ANCLAJES HISTÓRICOS: nos recuerdan nuestra historia.'],
+ notes:[
+  ['Espacio público','De todos y del Estado: parques, plazas, calles. Acceso libre y colectivo.'],
+  ['Espacio privado','De una persona o familia: la casa, el cuarto. Se entra con permiso.'],
+  ['Espacio de transición','Andenes y aceras: unen lo privado con lo público y son de uso colectivo.'],
+  ['Frontera visual','Una reja baja deja ver, pero no deja entrar.'],
+  ['Pulmón verde y anclaje histórico','Los árboles limpian el aire. Los monumentos nos recuerdan la historia.']]},
+{id:'julian', d:'avenida', name:'Julián, el ciclista', x:-8, z:69, look:{skin:SK[1],hair:HR[1],shirt:'#ef476f',style:0,acc:'helmet'},
+ intro:['Recorro la ciudad en bicicleta y paso por todo tipo de lugares. ¿Sabes qué clase de espacio es cada uno?'],
+ ch:{type:'classify', q:'¿Qué tipo de espacio es cada lugar?', cats:['Espacio público','Espacio privado','Transición (andén)'],
+  items:[['La plaza principal del pueblo',0],['El cuarto de tu hermana',1],['El andén frente a la panadería',2],['La sala de la casa del vecino',1],['El parque del barrio',0],['La acera que lleva a la entrada del colegio',2]],
+  why:'Lo público es de todos (plazas, parques). Lo privado es de una familia (cuarto, sala). Los andenes y aceras son de transición: conectan lo privado con lo público y los usamos todos.'},
+ after:'¡Muy bien! Y yo, por la ciclorruta, que también es de todos.'},
+{id:'marta', d:'avenida', name:'Doña Marta', x:10, z:67, look:{skin:SK[3],hair:HR[1],shirt:'#f77f00',style:1,acc:'apron'},
+ intro:['Tengo mi puesto de jugos al lado del taller de Don Germán. Él saca llantas y deja los carros encima del andén.','La gente tiene que bajarse a la calle, por donde pasan los buses. Don Germán dice: «Este andén es mío porque está pegado a mi puerta».'],
+ ch:{type:'quiz', q:'¿Por qué se equivoca Don Germán?',
+  opts:['Porque el andén es un espacio de transición de uso colectivo: no se puede llenar de cosas personales como si fuera privado.','Porque los andenes son solo para los carros y las motos.','Porque solo el alcalde puede guardar cosas en los andenes.','Porque el andén es de los vecinos que viven en la cuadra y solo ellos lo usan.'],
+  hint:'¿Quiénes caminan por el andén? ¿Solo Don Germán o todos?',
+  why:'El andén conecta las casas y negocios con la calle, y lo usamos todos para caminar seguros. Ocuparlo obliga a los peatones a ponerse en peligro.'},
+ after:'¡Eso! Voy a mostrarle a Don Germán. Seguro que despeja el andén.'},
+{id:'valentina', d:'avenida', name:'Valentina', x:8, z:58, look:{skin:SK[0],hair:HR[2],shirt:'#7b5cd6',style:2,kid:1},
+ intro:['Mi casa tiene un antejardín con rosas, rodeado de una reja baja con candado.','Desde la calle todo el mundo ve las flores, pero nadie entra sin permiso. Mi hermano dice que, como se ven, el jardín es de todos.'],
+ ch:{type:'quiz', q:'¿Cómo se clasifica el antejardín de Valentina?',
+  opts:['Es espacio privado con una frontera visual: se puede mirar, pero solo entra la familia.','Es espacio público, porque está frente a la calle.','Es de apertura total: cualquiera puede entrar porque se ve desde afuera.','Es del Estado, porque las flores se ven desde la calle.'],
+  hint:'Que algo se pueda ver no quiere decir que se pueda entrar.',
+  why:'El antejardín pertenece a la familia, así que es privado. La reja baja es una frontera visual: deja mirar hacia adentro, pero no deja entrar sin permiso.'},
+ after:'¡Ja! Le voy a decir a mi hermano que mirar sí, pero entrar no.'},
+{id:'gilberto', d:'avenida', name:'Don Gilberto', x:0, z:88, look:{skin:SK[2],hair:HR[5],shirt:'#3d405b',style:0,acc:'hat'},
+ intro:['Unos vecinos le pusieron una cerca al parque del prócer y ahora cobran mil pesos por sentarse en las bancas.','Dicen que con esa plata le van a pagar a un jardinero. A mí no me parece bien, pero no sé explicar por qué.'],
+ ch:{type:'quiz', q:'¿Por qué está mal lo que hicieron esos vecinos?',
+  opts:['Porque el parque es espacio público del Estado: su acceso debe ser libre para todos, y el Estado es quien debe mantenerlo.','Porque las bancas les pertenecen solo a las familias que viven al frente.','Porque en los parques está prohibido tener árboles y estatuas.','Porque en los parques solo se puede caminar rápido, no sentarse.'],
+  hint:'Recuerda: ¿de quién es el espacio público y quién lo mantiene?',
+  why:'El espacio público es de todos. Nadie puede cerrarlo ni cobrar por usarlo. Si el parque necesita jardinero, hay que pedírselo a la Alcaldía.'},
+ after:'¡Eso era! Mañana vamos a la Alcaldía a pedir el jardinero y a quitar la cerca.'},
+{id:'nicolas', d:'avenida', name:'Nicolás', x:-3, z:57, look:{skin:SK[4],hair:HR[0],shirt:'#118ab2',style:0,kid:1},
+ intro:['¡Mira la estatua del prócer! Mi amigo dice que los árboles del parque y esta estatua sirven exactamente para lo mismo.'],
+ ch:{type:'quiz', q:'¿Cuál es el error del amigo de Nicolás?',
+  opts:['Los árboles son el pulmón verde que limpia el aire; la estatua es un anclaje histórico que nos recuerda el pasado.','Los árboles sirven para recordar la historia y la estatua sirve para limpiar el aire.','Los árboles son de las casas cercanas y la estatua es de una empresa privada.','En el espacio público solo puede haber estatuas, porque los árboles son de los jardines privados.'],
+  hint:'Piensa qué hace un árbol por el aire, y qué te hace recordar una estatua.',
+  why:'Los árboles dan oxígeno, sombra y frescura: son el pulmón verde. Los monumentos guardan la memoria de hechos y personas: son anclajes históricos. Los dos son valiosos, pero cumplen funciones distintas.'},
+ after:'¡Claro! Uno nos ayuda a respirar y el otro a recordar.'},
+
+/* ================= 6. PARQUE DE LOS VOLCANES ================= */
+{id:'maritza', d:'parque', role:'guide', name:'Geóloga Maritza', x:-50, z:29, look:{skin:SK[1],hair:HR[2],shirt:'#7b5cd6',style:1,acc:'helmet'},
+ lesson:[
+  '¡Hola, {n}! Soy Maritza, geóloga. Estudio las rocas y la Tierra. Mira este volcán: ¡con la niebla nadie recuerda cómo se formó!',
+  'La capa de afuera de la Tierra está partida en enormes PLACAS TECTÓNICAS que se mueven muy despacio.',
+  'En Colombia se encuentran cinco: Nazca, Caribe, Sudamericana, Norandina y Panamá.',
+  'Donde dos placas chocan hay un LÍMITE CONVERGENTE. La presión del choque levanta montañas y produce volcanes y temblores.',
+  'Esa presión empujó y dividió la cordillera de los Andes en tres ramales: Occidental, Central y Oriental. Mira la maqueta.',
+  'Ojo con esto: la SIERRA NEVADA DE SANTA MARTA no hace parte de los Andes. Es una montaña aislada junto al mar Caribe, y allí están los picos más altos de Colombia, de más de 5.700 metros.',
+  'Y en las costas hay formas especiales: golfos, bahías, penínsulas e islas. Mis amigos te van a contar más.'],
+ notes:[
+  ['Placas tectónicas','En Colombia chocan cinco: Nazca, Caribe, Sudamericana, Norandina y Panamá.'],
+  ['Límite convergente','Donde dos placas chocan: se forman montañas, volcanes y temblores.'],
+  ['Tres cordilleras','La presión del choque entre placas dividió los Andes en Occidental, Central y Oriental.'],
+  ['Sierra Nevada de Santa Marta','No hace parte de los Andes. Tiene los picos más altos de Colombia: Cristóbal Colón y Simón Bolívar.'],
+  ['Golfo y bahía','Golfo: entrada de mar amplia en la tierra. Bahía: entrada de mar más pequeña y protegida.'],
+  ['Península e isla','Península: tierra rodeada de agua casi por todos lados. Isla: rodeada de agua por todos lados.']]},
+{id:'simon', d:'parque', name:'Simón', x:-70, z:34, look:{skin:SK[2],hair:HR[0],shirt:'#ffb703',style:4,kid:1},
+ intro:['En la maqueta del parque vi que los Andes entran a Colombia por el sur como una sola cordillera, y después se abren en tres.','¿Qué los habrá hecho dividirse?'],
+ ch:{type:'quiz', q:'¿Cuál es la mejor explicación para que los Andes se dividan en tres ramales?',
+  opts:['La fuerte presión del choque entre placas tectónicas empujó y dividió la cordillera.','Los ríos Magdalena y Cauca levantaron las montañas con la tierra que arrastraron.','Los vientos chocaron contra las montañas durante años y las partieron en tres.','El hielo de los nevados se derritió y rompió la cordillera en tres partes.'],
+  hint:'¿Qué hay debajo de Colombia que se mueve y choca?',
+  why:'Las placas tectónicas que chocan bajo Colombia generan una presión enorme. Esa fuerza levantó los Andes y los dividió en las cordilleras Occidental, Central y Oriental.'},
+ after:'¡Wow! Entonces las montañas siguen creciendo, aunque sea muy despacito.'},
+{id:'camila', d:'parque', name:'Camila', x:-58, z:44, look:{skin:SK[0],hair:HR[4],shirt:'#ef476f',style:2,kid:1},
+ intro:['Estoy haciendo una lista de cosas que pasan por culpa del choque de placas. Pero mi hermanito me metió unas que no tienen nada que ver.'],
+ ch:{type:'classify', q:'¿Esto ocurre por el choque de placas en un límite convergente?', cats:['Sí, por el choque de placas','No tiene que ver'],
+  items:[['La erupción de un volcán',0],['Un temblor de tierra',0],['El levantamiento de grandes montañas',0],['Que llueva en la tarde',1],['Que un río se desborde después de un aguacero',1],['Que suba la marea en la playa',1]],
+  why:'En los límites convergentes, el choque de placas produce volcanes, temblores y montañas. La lluvia, las crecientes y las mareas tienen otras causas: el clima y la Luna.',
+  note:['En un límite convergente','Hay volcanes, temblores y formación de montañas.']},
+ after:'¡Gracias! Le voy a explicar a mi hermanito que la lluvia no viene de las placas.'},
+{id:'luis', d:'parque', name:'Luis', x:-70, z:46, look:{skin:SK[3],hair:HR[1],shirt:'#06a77d',style:0,kid:1},
+ intro:['Yo digo que como Colombia es un país andino, su montaña más alta tiene que estar en la cordillera Occidental, Central u Oriental.','Pero la Geóloga Maritza dice que me equivoco. ¿Por qué?'],
+ ch:{type:'quiz', q:'¿Por qué se equivoca Luis?',
+  opts:['Porque los picos más altos de Colombia están en la Sierra Nevada de Santa Marta, que no hace parte de los Andes.','Porque la montaña más alta es un volcán, y los volcanes no son montañas.','Porque la montaña más alta está en el páramo de Sumapaz.','Porque la más alta es la Sierra Nevada del Cocuy, ya que es la única con nieve.'],
+  hint:'Recuerda la montaña aislada que está junto al mar Caribe.',
+  why:'La Sierra Nevada de Santa Marta es una montaña aislada, separada de los Andes. Allí están los picos Cristóbal Colón y Simón Bolívar, los más altos del país.'},
+ after:'¡No sabía! Ahora quiero conocer la Sierra Nevada.'},
+{id:'arturo', d:'parque', name:'Capitán Arturo', x:-52, z:40, look:{skin:SK[2],hair:HR[5],shirt:'#f4f1de',style:0,acc:'cap'},
+ intro:['He navegado por todas las costas de Colombia. En mis cartas de navegación hay formas de costa con nombres especiales.','A ver si sabes reconocerlas.'],
+ ch:{type:'classify', q:'¿Qué forma de la costa describe cada frase?', cats:['Golfo','Bahía','Península','Isla'],
+  items:[['Una entrada de mar muy amplia que se mete en la tierra, como Urabá.',0],['Una entrada de mar más pequeña y protegida, donde se resguardan los barcos, como la de Cartagena.',1],['Tierra rodeada de agua casi por todos lados y unida al continente por una parte, como La Guajira.',2],['Tierra rodeada de agua por todos lados, como San Andrés.',3],['Gorgona, en el océano Pacífico, rodeada de mar por completo.',3]],
+  why:'Golfo y bahía son entradas de mar en la tierra: el golfo es amplio y la bahía es más pequeña y protegida. La península tiene agua casi por todos lados; la isla, por todos.'},
+ after:'¡Serías un gran marinero! Bienvenido a bordo cuando quieras.'}
+];
+
+const DONE_LINES = {
+  espejos:'¡Cuic! La gente del barrio volvió a defender sus derechos. (Chigüi encontró una tesela roja.)',
+  feria:'¡Cuic, cuic! La feria volvió a sonar con músicas de todas las regiones. (Chigüi encontró una tesela naranja.)',
+  cano:'¡Cuic! El bosque y el caño de la reserva respiran otra vez. (Chigüi encontró una tesela verde.)',
+  memoria:'¡Cuic! Los trenes de las naciones vuelven a llegar a tiempo. (Chigüi encontró una tesela azul.)',
+  avenida:'¡Cuic, cuic! Los andenes y el parque vuelven a ser de todos. (Chigüi encontró una tesela amarilla.)',
+  parque:'¡Cuic! El volcán y la maqueta brillan de nuevo. (Chigüi encontró una tesela morada.)'
+};
+
+const FINAL_LINES = [
+  '¡{n}! Mira a tu alrededor: Villa Mosaico recuperó todos sus colores. Trajiste las seis teselas.',
+  'Conociste tu territorio, cuidaste la naturaleza y los espacios de todos, y aprendiste a defender los derechos humanos.',
+  'Solo falta una cosa para sellar el Gran Mosaico: un ensayo escrito con tus propias palabras sobre las organizaciones que protegen los derechos humanos.'
+];
+/* ---------- distribución de casas y árboles (determinista) ---------- */
+const ROADS = [];
+DISTRICTS.forEach((d,i)=>{ ROADS.push([0,0,d.cx,d.cz]); const e=DISTRICTS[(i+1)%6]; ROADS.push([d.cx,d.cz,e.cx,e.cz]); });
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function distSeg(px,pz,s){const vx=s[2]-s[0],vz=s[3]-s[1];let t=((px-s[0])*vx+(pz-s[1])*vz)/(vx*vx+vz*vz);t=Math.max(0,Math.min(1,t));return Math.hypot(px-(s[0]+vx*t),pz-(s[1]+vz*t));}
+function nearestDistrict(x,z){let b=null,bd=1e9;DISTRICTS.forEach(d=>{const q=Math.hypot(x-d.cx,z-d.cz);if(q<bd){bd=q;b=d;}});return Math.hypot(x,z)<24?null:b;}
+function buildLayout(){
+  const r=rng(11), col=[], houses=[], trees=[];
+  Object.keys(B).forEach(k=>{const o=B[k]; col.push(o.r?{x:o.x,z:o.z,r:o.r}:{x0:o.x-o.w/2,x1:o.x+o.w/2,z0:o.z-o.d/2,z1:o.z+o.d/2});});
+  [CEIBA].concat(NPCS).forEach(n=>col.push({x:n.x,z:n.z,r:.75}));
+  const free=(x,z,m)=>{
+    if(Math.hypot(x,z)<19+m) return false;
+    for(const d of DISTRICTS) if(Math.hypot(x-d.cx,z-d.cz)<27+m) return false;
+    if(Math.abs(z-78)<8+m && Math.abs(x)<42) return false;
+    if(x>70-m && z<2 && z>-78) return false;
+    if(Math.abs(z-49)<4+m && x>30) return false;
+    for(const s of ROADS) if(distSeg(x,z,s)<3.2+m) return false;
+    return true;};
+  for(let gx=-91;gx<=91;gx+=13) for(let gz=-91;gz<=91;gz+=13){
+    const x=gx+(r()-.5)*5, z=gz+(r()-.5)*5, w=5+r()*2.5, d=4.5+r()*2, h=2.8+r()*1.8, c=r(), rf=r();
+    if(r()<.82 && free(x,z,4.2)){ houses.push({x,z,w,d,h,c,rf}); col.push({x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2}); }
+  }
+  for(let i=0;i<330 && trees.length<120;i++){
+    const x=(r()-.5)*204, z=(r()-.5)*204, s=.8+r()*.7, k=r();
+    if(!free(x,z,1.6)) continue;
+    if(houses.some(h=>Math.abs(x-h.x)<h.w/2+2 && Math.abs(z-h.z)<h.d/2+2)) continue;
+    if(trees.some(t=>Math.hypot(x-t.x,z-t.z)<3)) continue;
+    trees.push({x,z,s,k}); col.push({x,z,r:.6});
+  }
+  return {col,houses,trees};
+}
+
+</script>
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const el=(tag,cls,txt)=>{const e=document.createElement(tag); if(cls)e.className=cls; if(txt!=null)e.textContent=txt; return e;};
+const KEY='ciudad_mosaico_4_v1';
+const SHIRTS=['#ef476f','#ffb703','#06a77d','#118ab2','#7b5cd6','#f77f00'];
+const STYLES=['Corto','Largo','Coletas','Afro','Gorra'];
+const RETOS=NPCS.filter(n=>n.ch), MAXSTARS=RETOS.length*3;
+const guideOf=id=>NPCS.find(n=>n.d===id&&n.role==='guide');
+const retosOf=id=>NPCS.filter(n=>n.d===id&&n.ch);
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+/* ---------- estado y guardado ---------- */
+function fresh(){return {name:'',g:'Guardián',look:{skin:SK[1],hair:HR[0],shirt:SHIRTS[3],style:0},intro:false,guides:{},solved:{},done:{},final:false,oath:'',pos:[0,7],mute:false};}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.look&&typeof s.name==='string') return Object.assign(fresh(),s);}catch(e){} return null;}
+function save(){try{S.pos=[P.x,P.z]; localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+let S=load()||fresh();
+const hadSave=!!S.name;
+const fmt=t=>t.replace(/\{n\}/g,S.name).replace(/\{g\}/g,S.g);
+const stars=()=>Object.values(S.solved).reduce((a,b)=>a+b,0);
+
+/* ---------- sonido ---------- */
+let AC=null;
+function beep(f,d,type,vol){ if(S.mute) return; try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); const o=AC.createOscillator(),g=AC.createGain(); o.type=type||'triangle'; o.frequency.value=f; g.gain.setValueAtTime(vol||.07,AC.currentTime); g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d); o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime+d);}catch(e){} }
+const sfx={tap:()=>beep(520,.06), ok:()=>{beep(660,.12);setTimeout(()=>beep(880,.2),110);}, bad:()=>beep(170,.22,'sawtooth',.04), win:()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.25),i*130))};
+
+/* ---------- escena ---------- */
+const canvas=$('#gl'); let renderer;
+try{ renderer=new THREE.WebGLRenderer({canvas,antialias:true}); }catch(e){ $('#vTitle').hidden=true; $('#nogl').hidden=false; return; }
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(50,1,.5,460);
+const SKY_G=new THREE.Color('#b4b8bf'), SKY_C=new THREE.Color('#8fd3ff');
+scene.background=SKY_G.clone(); scene.fog=new THREE.Fog(SKY_G.getHex(),60,190);
+scene.add(new THREE.HemisphereLight(0xeaf6ff,0x88a06f,.62));
+const sun=new THREE.DirectionalLight(0xfff1d6,.52); sun.position.set(40,70,50); scene.add(sun);
+
+const TG={}; ['all'].concat(DISTRICTS.map(d=>d.id)).forEach(k=>TG[k]={f:0,t:0,mats:[],cache:{}});
+function TM(hex,gid){const G=TG[gid||'all']; if(G.cache[hex]) return G.cache[hex]; const m=new THREE.MeshPhongMaterial({color:hex,flatShading:true,shininess:0,specular:0x000000}); G.mats.push({m,b:new THREE.Color(hex)}); return G.cache[hex]=m;}
+const CMc={}; function CM(hex){return CMc[hex]||(CMc[hex]=new THREE.MeshPhongMaterial({color:hex,flatShading:true,shininess:0,specular:0x000000}));}
+let _ps=7; const prnd=()=>(_ps=_ps*16807%2147483647)/2147483647;
+const COB=(function(){const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d');
+  x.fillStyle='#b4ac9c'; x.fillRect(0,0,128,128);
+  for(let j=0;j<4;j++) for(let i=0;i<4;i++){const l=80+prnd()*13; x.fillStyle='hsl(38,'+(10+prnd()*8)+'%,'+l+'%)'; x.fillRect(i*32+1.5,j*32+1.5,29,29);}
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; return t;})();
+function cob(rx,ry){const t=COB.clone(); t.needsUpdate=true; t.repeat.set(rx,ry); return t;}
+function TMap(hex,gid,map){const m=new THREE.MeshPhongMaterial({color:hex,map:map,flatShading:true,shininess:0,specular:0x000000}); TG[gid||'all'].mats.push({m,b:new THREE.Color(hex)}); return m;}
+function TMd(hex){const m=new THREE.MeshPhongMaterial({color:hex,flatShading:true,shininess:0,specular:0x000000,side:THREE.DoubleSide}); TG.all.mats.push({m,b:new THREE.Color(hex)}); return m;}
+const _g=new THREE.Color();
+function applyTint(G){G.mats.forEach(o=>{const l=o.b.r*.3+o.b.g*.59+o.b.b*.11; _g.setRGB(l*.6+.24,l*.6+.25,l*.6+.28); o.m.color.copy(_g).lerp(o.b,G.f);});}
+
+function add(geo,mat,x,y,z,par){const m=new THREE.Mesh(geo,mat); m.position.set(x,y,z); (par||scene).add(m); return m;}
+const bx=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+const cy=(a,b,h,s)=>new THREE.CylinderGeometry(a,b,h,s||10);
+const sp=(r,w,h)=>new THREE.SphereGeometry(r,w||10,h||8);
+const co=(r,h,s)=>new THREE.ConeGeometry(r,h,s||8);
+const flat=(geo,mat,x,y,z)=>{const m=add(geo,mat,x,y,z); m.rotation.x=-Math.PI/2; return m;};
+
+function label(text,bg,fg,h){
+  const c=document.createElement('canvas'),x=c.getContext('2d'),F='800 40px Nunito, "Segoe UI", Arial, sans-serif';
+  x.font=F; const w=Math.ceil(x.measureText(text).width)+44; c.width=w; c.height=64; x.font=F;
+  x.fillStyle=bg; const r=22; x.beginPath(); x.moveTo(r,2); x.arcTo(w-2,2,w-2,62,r); x.arcTo(w-2,62,2,62,r); x.arcTo(2,62,2,2,r); x.arcTo(2,2,w-2,2,r); x.fill();
+  x.fillStyle=fg; x.textAlign='center'; x.textBaseline='middle'; x.fillText(text,w/2,34);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));
+  s.scale.set(h*w/64,h,1); return s;
+}
+function badgeMat(ch,bg){const c=document.createElement('canvas'),x=c.getContext('2d'); c.width=c.height=96; x.fillStyle='#1b2a4a'; x.beginPath(); x.arc(48,48,46,0,7); x.fill(); x.fillStyle=bg; x.beginPath(); x.arc(48,48,38,0,7); x.fill(); x.fillStyle='#1b2a4a'; x.font='800 58px Arial, sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(ch,48,52); return new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false});}
+const MK={go:badgeMat('!','#ffb703'),lock:badgeMat('…','#c9ced8'),ok:badgeMat('✓','#7be0b0')};
+
+/* ---------- personajes ---------- */
+function person(look){
+  const g=new THREE.Group(), skin=CM(look.skin), shirt=CM(look.shirt), pants=CM(look.pants||'#2f3e63'), hair=CM(look.hair), dark=CM('#1b1b1f'), shoe=CM('#3a2a22');
+  const limb=(x,y,build)=>{const p=new THREE.Group(); p.position.set(x,y,0); g.add(p); build(p); return p;};
+  const leg=p=>{add(bx(.3,.62,.32),pants,0,-.31,0,p); add(bx(.32,.16,.44),shoe,0,-.66,.05,p);};
+  const arm=p=>{add(bx(.22,.5,.26),shirt,0,-.22,0,p); add(bx(.2,.2,.22),skin,0,-.56,0,p);};
+  const legL=limb(-.19,.74,leg), legR=limb(.19,.74,leg), armL=limb(-.53,1.44,arm), armR=limb(.53,1.44,arm);
+  add(bx(.82,.78,.5),shirt,0,1.12,0,g);
+  const head=new THREE.Group(); head.position.set(0,2,0); g.add(head);
+  add(sp(.46,14,10),skin,0,0,0,head);
+  add(sp(.06,6,6),dark,-.16,.02,.42,head); add(sp(.06,6,6),dark,.16,.02,.42,head);
+  add(bx(.16,.04,.03),CM('#a8483f'),0,-.17,.43,head);
+  const st=look.style|0;
+  if(st!==3){ const cap=add(new THREE.SphereGeometry(.495,14,8,0,Math.PI*2,0,Math.PI*.55),st===4?shirt:hair,0,.03,-.03,head); cap.rotation.x=-.3; }
+  if(st===1) add(bx(.82,.62,.24),hair,0,-.2,-.33,head);
+  if(st===2){ add(sp(.19,8,6),hair,-.52,.02,-.05,head); add(sp(.19,8,6),hair,.52,.02,-.05,head); }
+  if(st===3) add(sp(.57,10,8),hair,0,.27,-.17,head);
+  if(st===4){ add(bx(.52,.06,.32),shirt,0,.16,.5,head); add(bx(.84,.3,.2),hair,0,-.12,-.34,head); }
+  const a=look.acc;
+  if(a==='hat'){ add(cy(.78,.78,.05,14),CM('#e9d8a6'),0,.36,0,head); add(cy(.32,.38,.3,12),CM('#e9d8a6'),0,.52,0,head); add(cy(.385,.385,.07,12),CM('#6b4226'),0,.41,0,head); }
+  if(a==='glasses'){ [-.17,.17].forEach(x=>{const t=add(new THREE.TorusGeometry(.105,.022,6,12),dark,x,.02,.44,head);}); add(bx(.1,.03,.03),dark,0,.03,.45,head); }
+  if(a==='cap'){ add(cy(.4,.46,.22,12),CM('#22333b'),0,.42,0,head); add(bx(.5,.05,.3),CM('#22333b'),0,.33,.45,head); add(bx(.84,.14,.52),CM('#d9f99d'),0,1.2,0,g); }
+  if(a==='helmet'){ add(new THREE.SphereGeometry(.53,12,8,0,Math.PI*2,0,Math.PI*.5),CM('#ffd60a'),0,.08,0,head); }
+  if(a==='apron'){ add(bx(.6,.7,.06),CM('#ffffff'),0,1.05,.27,g); }
+  if(a==='vest'){ add(bx(.86,.5,.54),CM('#b7f34d'),0,1.18,0,g); }
+  if(a==='pack'){ add(bx(.56,.6,.26),CM('#ffb703'),0,1.14,-.36,g); }
+  const sh=flat(new THREE.CircleGeometry(.62,14),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.22,depthWrite:false}),0,.16,0); g.add(sh);
+  g.userData={legL,legR,armL,armR,head};
+  return g;
+}
+function swing(g,t,amt){const u=g.userData,a=Math.sin(t)*amt; u.legL.rotation.x=a; u.legR.rotation.x=-a; u.armL.rotation.x=-a*.9; u.armR.rotation.x=a*.9;}
+function capybara(){
+  const g=new THREE.Group(), b=CM('#9a6b3f'), d=CM('#6f4a28');
+  add(bx(.62,.5,.95),b,0,.5,0,g); add(bx(.46,.42,.46),b,0,.72,.58,g); add(bx(.4,.26,.2),d,0,.64,.86,g);
+  add(bx(.1,.12,.08),d,-.17,.98,.5,g); add(bx(.1,.12,.08),d,.17,.98,.5,g);
+  add(sp(.045,6,6),CM('#1b1b1f'),-.2,.8,.76,g); add(sp(.045,6,6),CM('#1b1b1f'),.2,.8,.76,g);
+  [[-.2,.32],[.2,.32],[-.2,-.32],[.2,-.32]].forEach(p=>add(bx(.16,.28,.16),d,p[0],.14,p[1],g));
+  const sh=flat(new THREE.CircleGeometry(.55,12),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.2,depthWrite:false}),0,.16,0); g.add(sh);
+  return g;
+}
+
+/* ---------- mundo ---------- */
+const L=buildLayout();
+const gone=[];   /* objetos que desaparecen al sanar un barrio: {d, obj} */
+function buildWorld(){
+  flat(new THREE.PlaneGeometry(700,700),TM('#8ccf6b'),0,0,0);
+  ROADS.forEach(s=>{const dx=s[2]-s[0],dz=s[3]-s[1],len=Math.hypot(dx,dz),m=add(bx(len,.06,5),TMap('#d9d2c2','all',cob(len/4,1.25)),(s[0]+s[2])/2,.03,(s[1]+s[3])/2); m.rotation.y=-Math.atan2(dz,dx);});
+  for(let i=0;i<16;i++){const a=i/16*Math.PI*2,m=add(sp(1,8,6),TM('#79b862'),Math.cos(a)*175,-3,Math.sin(a)*175); m.scale.set(46+(i%3)*12,13+(i%4)*5,46);}
+  const roofGeo=co(.7071,1,4); roofGeo.rotateY(Math.PI/4);
+  const HC=['#ffd6a5','#fdf3a7','#caffbf','#a9e9ff','#cdc2ff','#ffc6e5','#fff1e6','#ffb3ad'], RC=['#c8553d','#b5523b','#7d4f50','#9a6b4f'];
+  const doorG=bx(1,1.7,.1), winG=bx(1.1,1,.1);
+  const WIN=[];
+  L.houses.forEach(h=>{const d=nearestDistrict(h.x,h.z),gid=d?d.id:'all',two=Math.hypot(h.x,h.z)<58&&h.c>.3,hh=two?h.h+2.4:h.h;
+    add(bx(h.w,hh,h.d),TM(HC[Math.floor(h.c*8)],gid),h.x,hh/2,h.z);
+    add(bx(h.w+.44,.3,h.d+.44),TM('#f7f3e8',gid),h.x,hh-.05,h.z);
+    const r=add(roofGeo,TM(RC[Math.floor(h.rf*4)],gid),h.x,hh+.8,h.z); r.scale.set(h.w+.7,1.6,h.d+.7);
+    if(h.rf>.5) add(bx(.55,1.15,.55),TM('#a98577',gid),h.x+h.w*.26,hh+1.15,h.z);
+    add(doorG,TM('#6b4226',gid),h.x-h.w*.2,.85,h.z+h.d/2+.04);
+    if(h.c>.6){const aw=add(bx(1.7,.1,1),TM(['#e5484d','#118ab2','#f77f00'][Math.floor(h.rf*3)],gid),h.x-h.w*.2,2.15,h.z+h.d/2+.5); aw.rotation.x=.3;}
+    const fls=two?[1.95,4.15]:[1.95];
+    fls.forEach((y,fi)=>{ WIN.push({x:h.x+h.w*.22,y,z:h.z+h.d/2+.06,ry:0}); if(fi>0) WIN.push({x:h.x-h.w*.2,y,z:h.z+h.d/2+.06,ry:0});
+      WIN.push({x:h.x+h.w/2+.06,y,z:h.z+h.d*.12,ry:Math.PI/2}); WIN.push({x:h.x-h.w/2-.06,y,z:h.z-h.d*.12,ry:Math.PI/2}); });
+  });
+  const trG=cy(.22,.32,1.6,6), icG=new THREE.IcosahedronGeometry(1.4,0), cnG=co(1.3,2.4,7);
+  L.trees.forEach(t=>{const d=nearestDistrict(t.x,t.z),gid=d?d.id:'all',g=new THREE.Group(); g.position.set(t.x,0,t.z); g.scale.setScalar(t.s); scene.add(g);
+    add(trG,TM('#7a5230',gid),0,.8,0,g);
+    if(t.k<.55){ add(icG,TM('#3f9d54',gid),0,2.5,0,g); add(icG,TM('#55b866',gid),.5,3.3,.2,g).scale.setScalar(.7); }
+    else { add(cnG,TM('#2f8f5b',gid),0,2.6,0,g); add(cnG,TM('#3fa56a',gid),0,3.8,0,g).scale.setScalar(.75); }});
+  const cl=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9,fog:false});
+  for(let i=0;i<8;i++){const g=new THREE.Group(); g.position.set(-150+i*42,44+(i%3)*7,-120+((i*53)%160)); scene.add(g); clouds.push(g);
+    [[0,0,0,7],[6,-1,1,5],[-6,-1,-1,5.5]].forEach(c=>{add(sp(1,8,6),cl,c[0],c[1],c[2],g).scale.set(c[3],c[3]*.5,c[3]*.8);});}
+
+  /* --- plaza central --- */
+  flat(new THREE.CircleGeometry(19,40),TMap('#ecdfc2','all',cob(9.5,9.5)),0,.11,0); flat(new THREE.RingGeometry(9,10,40),TM('#cdb98c'),0,.14,0);
+  add(bx(8.6,6,1.2),TM('#f3efe6'),0,3,-7.9); add(bx(9.4,.5,1.8),TM('#b9a98a'),0,.25,-7.7);
+  const disc=add(new THREE.CircleGeometry(2.75,36),new THREE.MeshBasicMaterial({color:0x1b2a4a}),0,3.3,-7.27);
+  DISTRICTS.forEach((d,i)=>{const m=new THREE.MeshBasicMaterial({color:0xaab0ba}); add(new THREE.CircleGeometry(2.5,10,Math.PI/2-(i+1)*Math.PI/3,Math.PI/3-.06),m,0,3.3,-7.25); wedges[d.id]=m;});
+  add(new THREE.CircleGeometry(.6,16),new THREE.MeshBasicMaterial({color:0x1b2a4a}),0,3.3,-7.23);
+  const pl=label('El Gran Mosaico','#1b2a4a','#ffffff',.9); pl.position.set(0,7,-7.6); scene.add(pl);
+  add(cy(1.1,1.5,6,8),TM('#7a5230'),B.ceiba.x,3,B.ceiba.z);
+  [[0,8.5,0,4.6],[2.5,7.5,1.5,3],[-3,7.8,-1,3.2]].forEach(c=>add(new THREE.IcosahedronGeometry(c[3],1),TM('#3f9d54'),B.ceiba.x+c[0],c[1],B.ceiba.z+c[2]));
+  [B.lampA,B.lampB].forEach(o=>{add(cy(.1,.14,3.6,6),TM('#3d405b'),o.x,1.8,o.z); add(sp(.36,8,6),new THREE.MeshBasicMaterial({color:0xfff3b0}),o.x,3.8,o.z);});
+
+  /* --- rótulos de barrio --- */
+  DISTRICTS.forEach((d,i)=>{const s=label((i+1)+' · '+d.name,d.tint,'#1b2a4a',1.5); s.position.set(d.cx,11,d.cz-6); scene.add(s);});
+
+  /* --- 1. espejos --- */
+  let id='espejos', o=B.school;
+  flat(new THREE.CircleGeometry(27,40),TM('#f1d8cb',id),-62,.11,-36);
+  add(bx(o.w,5,o.d),TM('#ffe39a',id),o.x,2.5,o.z); add(bx(o.w+1,.5,o.d+1),TM('#c8553d',id),o.x,5.25,o.z);
+  add(bx(2.2,2.6,.12),TM('#6b4226',id),o.x,1.3,o.z+o.d/2+.05);
+  for(let i=0;i<6;i++){ if(i===2||i===3) continue; add(bx(1.6,1.4,.12),TM('#d7f1ff',id),o.x-7.5+i*3,3,o.z+o.d/2+.05); }
+  add(cy(.08,.08,4,6),TM('#3d405b',id),o.x+7,7,o.z); add(bx(1.6,1,.06),TM('#ffd60a',id),o.x+7.85,8.4,o.z);
+  [B.mir1,B.mir2,B.mir3].forEach((m,i)=>{const g=new THREE.Group(); g.position.set(m.x,0,m.z); g.rotation.y=[.5,-.4,.8][i]; scene.add(g);
+    add(bx(2.3,3.6,.3),TM('#8d6e63',id),0,1.9,0,g); add(bx(1.9,3.1,.06),TM('#bfe9ff',id),0,1.95,.17,g); add(bx(2.6,.3,1),TM('#8d6e63',id),0,.15,0,g);});
+  /* --- 2. feria --- */
+  id='feria'; o=B.stage;
+  flat(new THREE.CircleGeometry(27,40),TM('#f6e2b8',id),0,.11,-72);
+  add(bx(o.w,1,o.d),TM('#b5651d',id),o.x,.5,o.z); add(bx(o.w,4.2,.4),TM('#7b2d26',id),o.x,3.1,o.z-2.8); add(bx(o.w+1,.3,o.d+.8),TM('#f77f00',id),o.x,5.4,o.z);
+  [[-6.6,2.6],[6.6,2.6]].forEach(p=>add(cy(.14,.14,4.4,6),TM('#5a3d2b',id),o.x+p[0],3.2,o.z+p[1]));
+  for(let i=0;i<11;i++){const f=add(co(.38,.7,3),TM(SHIRTS[i%6],id),o.x-6.5+i*1.3,4.9,o.z+3.3); f.rotation.x=Math.PI;}
+  const harp=new THREE.Group(); harp.position.set(o.x+3,1,o.z); scene.add(harp);
+  add(bx(.18,2.6,.18),TM('#d4a017',id),0,1.3,0,harp); const hb=add(bx(.18,2.4,.5),TM('#d4a017',id),.6,1.25,0,harp); hb.rotation.z=.5; add(bx(1.4,.16,.2),TM('#d4a017',id),.55,2.55,0,harp);
+  add(bx(1.3,.9,.9),TM('#f4f1de',id),o.x-3.4,1.45,o.z-.6); add(cy(.5,.5,.5,10),TM('#c8553d',id),o.x-1.4,1.25,o.z+.4);
+  [B.tent1,B.tent2,B.tent3].forEach((t,i)=>{const c=[SHIRTS[0],SHIRTS[2],SHIRTS[3]][i]; [[-1.5,-1.5],[1.5,-1.5],[-1.5,1.5],[1.5,1.5]].forEach(p=>add(cy(.08,.08,2.6,5),TM('#5a3d2b',id),t.x+p[0],1.3,t.z+p[1]));
+    const r=add(co(2.9,1.6,4),TM(c,id),t.x,3.4,t.z); r.rotation.y=Math.PI/4; add(bx(2.2,.9,1.2),TM('#e9c46a',id),t.x,.45,t.z);
+    [-.6,0,.6].forEach((x,k)=>add(sp(.2,6,5),TM(['#ffd60a','#f4f1de','#c8553d'][k],id),t.x+x,1.05,t.z));});
+  /* --- 3. caño --- */
+  id='cano';
+  flat(new THREE.CircleGeometry(27,40),TM('#a9dc8c',id),62,.11,-36);
+  o=B.river; add(bx(o.w,.1,o.d),TM('#35a7e0',id),o.x,.14,o.z); add(bx(1.2,.12,o.d),TM('#d8c79a',id),o.x-3.4,.16,o.z);
+  for(let i=0;i<7;i++){const m=flat(new THREE.CircleGeometry(.9+(i%3)*.4,10),new THREE.MeshBasicMaterial({color:0x2a2622,transparent:true,opacity:.75}),78+((i*37)%30)/10,.22,-66+i*9.5); gone.push({d:id,obj:m});}
+  [[73.6,-52,'#ef476f'],[74.2,-47,'#f4f1de'],[73.4,-41,'#118ab2'],[74.4,-36,'#ffd60a'],[73.8,-27,'#f4f1de'],[74.3,-20,'#ef476f'],[72.9,-33,'#7b5cd6']].forEach(t=>{const m=add(bx(.42,.3,.34),CM(t[2]),t[0],.2,t[1]); m.rotation.y=t[1]; gone.push({d:id,obj:m});});
+  o=B.forest; for(let i=0;i<26;i++){const x=o.x-5+((i*7.3)%11),z=o.z-33+i*2.6,s=1+((i*13)%7)/10,g=new THREE.Group(); g.position.set(x,0,z); g.scale.setScalar(s); scene.add(g); add(trG,TM('#7a5230',id),0,.8,0,g); add(icG,TM(i%2?'#2f8f5b':'#3f9d54',id),0,2.6,0,g);}
+  o=B.shed; add(bx(o.w,3.4,o.d),TM('#aab4bf',id),o.x,1.7,o.z); const sr=add(bx(o.w+1,.3,o.d+1),TM('#6c757d',id),o.x,3.7,o.z); sr.rotation.z=.08; add(bx(3,2.4,.12),TM('#3d405b',id),o.x-1,1.2,o.z+o.d/2+.05);
+  [[0,0,'#d1495b'],[.9,.5,'#2d3142'],[-.2,.9,'#edae49']].forEach(b=>add(cy(.42,.42,1.1,10),TM(b[2],id),B.barrels.x+b[0]-.3,.55,B.barrels.z+b[1]-.4));
+  /* --- 4. memoria --- */
+  id='memoria'; o=B.station;
+  flat(new THREE.CircleGeometry(27,40),TM('#dccfb6',id),62,.11,36);
+  add(bx(o.w,4.5,o.d),TM('#f4e3c1',id),o.x,2.25,o.z); add(bx(o.w+1.6,.5,o.d+1.6),TM('#8c3b2a',id),o.x,4.75,o.z);
+  add(bx(3,8.4,3),TM('#f4e3c1',id),o.x,4.2,o.z); const tr=add(roofGeo,TM('#8c3b2a',id),o.x,9.4,o.z); tr.scale.set(3.8,2,3.8);
+  add(new THREE.CircleGeometry(.95,20),new THREE.MeshBasicMaterial({color:0xffffff}),o.x,6.8,o.z+1.52); add(bx(.08,.7,.04),CM('#1b1b1f'),o.x,7.1,o.z+1.55); add(bx(.5,.08,.04),CM('#1b1b1f'),o.x+.22,6.8,o.z+1.55);
+  add(bx(1.8,2.6,.12),TM('#6b4226',id),o.x,1.3,o.z+o.d/2+.05); [-5,-2.8,2.8,5].forEach(x=>add(bx(1.4,1.5,.12),TM('#d7f1ff',id),o.x+x,2.6,o.z+o.d/2+.05));
+  const st=label('Estación de las Naciones','#f4e3c1','#1b2a4a',.8); st.position.set(o.x,5.9,o.z+4.6); scene.add(st);
+  add(bx(66,.14,.2),TM('#5b5f66',id),66,.3,48.2); add(bx(66,.14,.2),TM('#5b5f66',id),66,.3,49.8);
+  const tieG=bx(.45,.1,2.6); for(let x=34;x<=98;x+=2.4) add(tieG,TM('#6b4226',id),x,.18,49);
+  o=B.loco; const lg=new THREE.Group(); lg.position.set(o.x,0,o.z); scene.add(lg);
+  const boiler=add(cy(1.15,1.15,5,12),TM('#2b2d42',id),-1,2,0,lg); boiler.rotation.z=Math.PI/2; add(bx(2.8,3.2,2.8),TM('#9d0208',id),2.9,2.5,0,lg); add(bx(3.2,.25,3.1),TM('#2b2d42',id),2.9,4.2,0,lg);
+  add(cy(.3,.4,1.3,8),TM('#2b2d42',id),-2.6,3.6,0,lg); add(bx(8.6,.5,2.4),TM('#3d405b',id),.2,.85,0,lg); add(co(1.1,1.4,4),TM('#edae49',id),-4.4,.9,0,lg).rotation.z=Math.PI/2;
+  [-3,-1,1,3].forEach(x=>[-1.25,1.25].forEach(z=>{const w=add(cy(.6,.6,.2,12),TM('#1b1b1f',id),x,.6,z,lg); w.rotation.x=Math.PI/2;}));
+  [[B.ban1,'ONU','#4b92db','#ffffff'],[B.ban2,'OEA','#1d3f7a','#ffd166'],[B.ban3,'DIH','#ffffff','#d62828']].forEach(f=>{const b=f[0]; add(cy(.12,.15,7,6),TM('#c9ced8',id),b.x,3.5,b.z); add(sp(.22,8,6),TM('#ffd166',id),b.x,7.1,b.z);
+    const c=document.createElement('canvas'),x=c.getContext('2d'); c.width=192; c.height=128; x.fillStyle=f[2]; x.fillRect(0,0,192,128); x.strokeStyle='#1b2a4a'; x.lineWidth=6; x.strokeRect(3,3,186,122); x.fillStyle=f[3]; x.font='800 58px Arial, sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(f[1],96,68);
+    const fl=add(new THREE.PlaneGeometry(2.4,1.6),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),side:THREE.DoubleSide}),b.x+1.25,6.1,b.z); flags.push(fl);});
+  /* --- 5. avenida --- */
+  id='avenida';
+  flat(new THREE.CircleGeometry(27,40),TM('#d3d6da',id),0,.11,72);
+  add(bx(88,.08,8),TM('#5c6068',id),0,.15,78); add(bx(88,.09,1.8),TM('#3d8fb3',id),0,.15,83.8);
+  for(let x=-42;x<=42;x+=4){ if(Math.abs(x)<3) continue; add(bx(1.8,.1,.18),CM('#f4f1de'),x,.18,78); }
+  for(let i=0;i<7;i++) add(bx(3.4,.1,.62),CM('#ffffff'),0,.18,74.7+i*1.1);
+  o=B.school2; add(bx(o.w,4.5,o.d),TM('#bde0fe',id),o.x,2.25,o.z); add(bx(o.w+1,.5,o.d+1),TM('#3d5a80',id),o.x,4.75,o.z); add(bx(2,2.5,.12),TM('#6b4226',id),o.x,1.25,o.z+o.d/2+.05);
+  [-4,4].forEach(x=>add(bx(1.6,1.4,.12),TM('#ffffff',id),o.x+x,2.7,o.z+o.d/2+.05));
+  const sc=label('Colegio','#bde0fe','#1b2a4a',.8); sc.position.set(o.x,5.8,o.z+3.2); scene.add(sc);
+  o=B.shelter; add(bx(o.w,2.4,.15),TM('#8ecae6',id),o.x,1.5,o.z-.6); add(bx(o.w+.4,.15,1.9),TM('#3d5a80',id),o.x,2.75,o.z); add(bx(o.w-1,.2,.6),TM('#6b4226',id),o.x,.6,o.z-.1);
+  o=B.stand; add(bx(o.w,1.1,o.d),TM('#f77f00',id),o.x,.55,o.z); add(cy(.06,.06,2.2,5),TM('#5a3d2b',id),o.x,2,o.z); add(co(2,.9,8),TM('#ef476f',id),o.x,3.3,o.z);
+  [-.8,0,.8].forEach((x,k)=>add(cy(.2,.16,.5,8),TM(['#ffd60a','#f77f00','#c8553d'][k],id),o.x+x,1.35,o.z+.4));
+  [[B.sgn1,'school'],[B.sgn2,'pare'],[B.sgn3,'bus']].forEach(a=>{add(cy(.07,.07,3,6),CM('#6c757d'),a[0].x,1.5,a[0].z); const p=add(new THREE.PlaneGeometry(1.7,1.7),new THREE.MeshBasicMaterial({map:signTex(a[1]),transparent:true,side:THREE.DoubleSide}),a[0].x,3.3,a[0].z+.05);});
+  [[76.5,1,'#e5484d'],[79.6,-1,'#118ab2']].forEach((c,i)=>{const g=new THREE.Group(); g.position.set(i?30:-30,0,c[0]); scene.add(g);
+    add(bx(3.8,.9,1.8),CM(c[2]),0,.8,0,g); add(bx(2,.8,1.6),CM('#d7f1ff'),-.1*c[1],1.6,0,g); [[-1.2,-.9],[1.2,-.9],[-1.2,.9],[1.2,.9]].forEach(w=>{add(cy(.36,.36,.2,10),CM('#1b1b1f'),w[0],.36,w[1],g).rotation.x=Math.PI/2;});
+    cars.push({g,dir:c[1],v:9});});
+  /* --- 6. parque --- */
+  id='parque';
+  flat(new THREE.CircleGeometry(27,40),TM('#9fe07c',id),-62,.11,36);
+  o=B.fountain; add(cy(3,3.2,.7,18),TM('#cfd8dc',id),o.x,.35,o.z); add(cy(2.6,2.6,.1,18),TM('#5cc8ff',id),o.x,.72,o.z); add(cy(.3,.45,1.8,8),TM('#cfd8dc',id),o.x,1.2,o.z); add(sp(.5,10,8),TM('#5cc8ff',id),o.x,2.3,o.z);
+  o=B.kiosk; add(cy(3.6,3.8,.4,8),TM('#e9d8a6',id),o.x,.2,o.z); for(let i=0;i<8;i++){const a=i/8*6.283; add(cy(.1,.1,3,5),TM('#ffffff',id),o.x+Math.cos(a)*3.2,1.9,o.z+Math.sin(a)*3.2);} add(co(4.4,2,8),TM('#7b5cd6',id),o.x,4.4,o.z);
+  [B.bench1,B.bench2].forEach(b=>{add(bx(2.4,.15,.7),TM('#b5651d',id),b.x,.6,b.z); add(bx(2.4,.6,.12),TM('#b5651d',id),b.x,1,b.z-.3); [-1,1].forEach(x=>add(bx(.14,.6,.6),TM('#3d405b',id),b.x+x,.3,b.z));});
+  o=B.swing; [-1.5,1.5].forEach(x=>{const a=add(cy(.08,.08,3.4,5),TM('#e5484d',id),o.x+x,1.6,o.z);}); add(bx(3.3,.14,.14),TM('#e5484d',id),o.x,3.3,o.z); [-.6,.6].forEach(x=>{add(bx(.04,2.2,.04),CM('#444444'),o.x+x-.25,2.2,o.z); add(bx(.04,2.2,.04),CM('#444444'),o.x+x+.25,2.2,o.z); add(bx(.6,.08,.3),TM('#ffd60a',id),o.x+x,1.1,o.z);});
+  for(let r=0;r<3;r++){ add(bx(5,.12,.9),TM('#7a5230',id),-43,.17,38+r*1.6); for(let k=0;k<6;k++) add(co(.18,.5,5),TM('#4caf50',id),-45+k*.8,.4,38+r*1.6); }
+  for(let i=0;i<18;i++){const a=i/18*6.283; add(sp(.28,6,5),TM(SHIRTS[i%6],id),-62+Math.cos(a)*24.5,.3,36+Math.sin(a)*24.5);}
+
+  /* --- estatua del prócer (avenida) --- */
+  id='avenida'; o=B.statue;
+  add(cy(1.5,1.7,.5,10),TM('#bfb6a3',id),o.x,.25,o.z); add(bx(1.6,1.9,1.6),TM('#d8d0bd',id),o.x,1.45,o.z); add(bx(1.9,.25,1.9),TM('#bfb6a3',id),o.x,2.5,o.z);
+  const pr=person({skin:'#8f9a8a',hair:'#7d8879',shirt:'#8f9a8a',pants:'#7d8879',style:0}); pr.children.forEach(ch=>{ if(ch.material&&ch.material.transparent) ch.visible=false; }); pr.traverse(m=>{ if(m.isMesh&&!m.material.transparent) m.material=TM('#9aa595',id); });
+  pr.position.set(o.x,2.62,o.z); pr.scale.setScalar(1.05); pr.userData.armR.rotation.x=-2.4; scene.add(pr);
+  const sl=label('Prócer de la Independencia','#efe7d4','#1b2a4a',.6); sl.position.set(o.x,6.6,o.z); scene.add(sl);
+  /* --- volcán y maqueta de las tres cordilleras (parque) --- */
+  id='parque'; o=B.volcano;
+  add(cy(.9,3.4,4.2,12),TM('#7a5c4a',id),o.x,2.1,o.z); add(cy(.95,1.25,.6,12),TM('#5b4336',id),o.x,4.3,o.z); add(cy(.7,.7,.12,12),TM('#ff7b25',id),o.x,4.62,o.z);
+  for(let k=0;k<6;k++){const a=k/6*6.283; const s=add(cy(.12,.5,2.4,5),TM('#e85d04',id),o.x+Math.cos(a)*1.4,3.1,o.z+Math.sin(a)*1.4); s.rotation.z=Math.cos(a)*.55; s.rotation.x=-Math.sin(a)*.55;}
+  const smM=new THREE.MeshBasicMaterial({color:0xe7e7ea,transparent:true,opacity:.75,depthWrite:false});
+  for(let k=0;k<5;k++){const s=add(sp(.6,8,6),smM.clone(),o.x,5+k*.9,o.z); smoke.push({m:s,ph:k/5,x:o.x,z:o.z});}
+  const vl=label('Volcán: límite convergente','#efe7d4','#1b2a4a',.6); vl.position.set(o.x,8.6,o.z); scene.add(vl);
+  o=B.maqueta; add(bx(o.w,.9,o.d),TM('#8d6248',id),o.x,.45,o.z); add(bx(o.w-.3,.08,o.d-.3),TM('#7fc8f8',id),o.x,.92,o.z); add(bx(o.w-.5,.12,o.d-.5),TM('#9fd67a',id),o.x,.98,o.z);
+  [[-.25,0],[.1,-.6],[.1,.6]].forEach((r,k)=>{const g=add(new THREE.ConeGeometry(.28,.75,4),TM('#8a6e4b',id),o.x+r[0],1.4,o.z+r[1]*.8); g.scale.set(1,1,1);});
+  const ridge=(x0,z0,x1,z1)=>{const n=6; for(let k=0;k<=n;k++){const t=k/n; const c=add(co(.22,.5+Math.sin(t*3.1)*.25,4),TM('#7d6a52',id),o.x+x0+(x1-x0)*t,1.25,o.z+z0+(z1-z0)*t);}};
+  ridge(-2,0,-.3,0); ridge(-.3,0,1.9,-1); ridge(-.3,0,2,0); ridge(-.3,0,1.9,1);
+  const ml=label('Maqueta: los Andes se abren en tres','#efe7d4','#1b2a4a',.5); ml.position.set(o.x,3,o.z); scene.add(ml);
+
+  /* --- decoración: jardineras, banderines, flores y pasto --- */
+  const POSTS=[],TUL=[],GRS=[];
+  [[14,0],[7,12.1],[-7,12.1],[-14,0],[-7,-12.1],[7,-12.1]].forEach((b,bi)=>{
+    flat(new THREE.CircleGeometry(1.7,12),TM('#8d6248'),b[0],.13,b[1]);
+    for(let k=0;k<9;k++){const a=k/9*6.283; POSTS.push({x:b[0]+Math.cos(a)*1.8,z:b[1]+Math.sin(a)*1.8});}
+    for(let k=0;k<7;k++){const a=k*2.4+bi; TUL.push({x:b[0]+Math.cos(a)*(.35+(k%3)*.42),z:b[1]+Math.sin(a)*(.35+(k%3)*.42),c:(k+bi)%4});}
+    L.col.push({x:b[0],z:b[1],r:2});});
+  let s2=13; const r2=()=>(s2=s2*16807%2147483647)/2147483647;
+  const open=(x,z)=>{ if(Math.hypot(x,z)<21) return false; if(Math.abs(z-78)<9&&Math.abs(x)<46) return false; if(x>68&&z<4&&z>-80) return false;
+    for(const s of ROADS) if(distSeg(x,z,s)<4) return false;
+    for(const h of L.houses) if(Math.abs(x-h.x)<h.w/2+1&&Math.abs(z-h.z)<h.d/2+1) return false; return true;};
+  for(let i=0;i<1400&&TUL.length<250;i++){const x=(r2()-.5)*196,z=(r2()-.5)*196; if(open(x,z)) TUL.push({x,z,c:i%4});}
+  for(let i=0;i<1800&&GRS.length<340;i++){const x=(r2()-.5)*196,z=(r2()-.5)*196; if(open(x,z)) GRS.push({x,z});}
+  const inst=(geo,mat,arr,y)=>{ if(!arr.length) return; const im=new THREE.InstancedMesh(geo,mat,arr.length);
+    const M=new THREE.Matrix4(),Q=new THREE.Quaternion(),E=new THREE.Euler(),V=new THREE.Vector3(),U=new THREE.Vector3(1,1,1);
+    arr.forEach((w,i)=>{E.set(0,w.ry||0,0); Q.setFromEuler(E); M.compose(V.set(w.x,w.y!==undefined?w.y:y,w.z),Q,U); im.setMatrixAt(i,M);});
+    scene.add(im); return im;};
+  inst(bx(1.06,.96,.07),TM('#fbfbf4'),WIN,0);
+  inst(bx(.9,.8,.12),TM('#cfe6f2'),WIN,0);
+  inst(bx(.12,.55,.12),TM('#fdfdf8'),POSTS,.27);
+  inst(cy(.028,.028,.5,4),TM('#3b9b57'),TUL,.25);
+  ['#ef476f','#ffd166','#ff8fab','#8f7bd8'].forEach((cc,ci)=>inst(sp(.14,6,5),TM(cc),TUL.filter(t=>t.c===ci),.52));
+  inst(co(.17,.5,5),TM('#5fae52'),GRS,.25);
+  for(let k=0;k<13;k++){const t=(k+.5)/13; const f=add(new THREE.PlaneGeometry(.55,.42),TMd(['#ef476f','#ffd166','#06a77d','#118ab2'][k%4]),-8+16*t,3.95-Math.sin(t*Math.PI)*.95,8); f.rotation.y=.2*(k%2?1:-1); f.rotation.z=.06;}
+}
+function signTex(kind){
+  const c=document.createElement('canvas'),x=c.getContext('2d'); c.width=c.height=128;
+  if(kind==='school'){ x.translate(64,64); x.rotate(Math.PI/4); x.fillStyle='#1b1b1f'; x.fillRect(-44,-44,88,88); x.fillStyle='#ffd60a'; x.fillRect(-38,-38,76,76); x.rotate(-Math.PI/4); x.fillStyle='#1b1b1f';
+    [[-12,0,1],[12,6,.8]].forEach(p=>{x.beginPath(); x.arc(p[0],-14*p[2]+p[1],7*p[2],0,7); x.fill(); x.fillRect(p[0]-5*p[2],-6*p[2]+p[1],10*p[2],22*p[2]);}); }
+  if(kind==='pare'){ x.translate(64,64); x.fillStyle='#ffffff'; poly(x,8,58); x.fillStyle='#d62828'; poly(x,8,52); x.fillStyle='#ffffff'; x.font='800 30px Arial, sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('PARE',0,2); }
+  if(kind==='bus'){ x.fillStyle='#ffffff'; x.fillRect(14,14,100,100); x.fillStyle='#1565c0'; x.fillRect(20,20,88,88); x.fillStyle='#ffffff'; x.fillRect(36,42,56,34); x.fillStyle='#1565c0'; x.fillRect(42,48,18,12); x.fillRect(68,48,18,12); x.fillStyle='#ffffff'; x.beginPath(); x.arc(48,82,7,0,7); x.arc(80,82,7,0,7); x.fill(); }
+  return new THREE.CanvasTexture(c);
+}
+function poly(x,n,r){x.beginPath(); for(let i=0;i<n;i++){const a=(i+.5)/n*Math.PI*2; x[i?'lineTo':'moveTo'](Math.cos(a)*r,Math.sin(a)*r);} x.closePath(); x.fill();}
+
+/* ---------- actores ---------- */
+const clouds=[], cars=[], wedges={}, actors=[], flags=[], smoke=[];
+const P={x:S.pos[0],z:S.pos[1],rot:0,t:0};
+let player=null, chigui=null;
+function buildPlayer(){ if(player) scene.remove(player); player=person(Object.assign({acc:'pack'},S.look)); player.scale.setScalar(.92); player.position.set(P.x,0,P.z); player.rotation.y=P.rot; scene.add(player); }
+function buildActors(){
+  [CEIBA].concat(NPCS).forEach(n=>{const g=person(n.look); g.scale.setScalar(n.look.kid?.84:1); g.position.set(n.x,0,n.z); scene.add(g);
+    const lb=label(n.name,'rgba(27,42,74,.88)','#ffffff',.62); lb.position.set(0,3.05,0); g.add(lb);
+    const mk=new THREE.Sprite(MK.go); mk.scale.set(.95,.95,1); mk.position.set(0,3.95,0); g.add(mk);
+    lb.scale.multiplyScalar(1/g.scale.x); mk.scale.multiplyScalar(1/g.scale.x);
+    actors.push({n,g,mk,ph:Math.random()*6});});
+  chigui=capybara(); chigui.position.set(P.x-1.4,0,P.z+1); scene.add(chigui);
+}
+function npcState(n){
+  if(n.id==='ceiba') return (!S.intro||(allDone()&&!S.final))?'go':'none';
+  if(n.role==='guide') return S.guides[n.d]?'none':'go';
+  if(S.solved[n.id]) return 'ok';
+  return S.guides[n.d]?'go':'lock';
+}
+const allDone=()=>DISTRICTS.every(d=>S.done[d.id]);
+function refresh(){
+  actors.forEach(a=>{const s=npcState(a.n); a.mk.visible=s!=='none'; if(s!=='none') a.mk.material=MK[s];});
+  DISTRICTS.forEach(d=>{const r=retosOf(d.id),k=r.filter(n=>S.solved[n.id]).length; TG[d.id].t=S.done[d.id]?1:(S.guides[d.id]?.12:0)+.6*k/r.length; wedges[d.id].color.set(S.done[d.id]?d.tint:'#aab0ba');});
+  TG.all.t=DISTRICTS.filter(d=>S.done[d.id]).length/6;
+  gone.forEach(o=>o.obj.visible=!S.done[o.d]);
+  $('#chipName').textContent=S.name; $('#chipStars').textContent='★ '+stars()+' / '+MAXSTARS;
+  const p=$('#pips'); p.textContent=''; DISTRICTS.forEach(d=>{const i=el('i'); if(S.done[d.id]) i.style.background=d.tint; p.appendChild(i);});
+  $('#btnSnd').textContent=S.mute?'Sin sonido':'Con sonido';
+}
+
+/* ---------- entrada ---------- */
+const keys={}; const joy={x:0,y:0};
+let mode='title';
+const MAPK={ArrowLeft:'l',a:'l',A:'l',ArrowRight:'r',d:'r',D:'r',ArrowUp:'u',w:'u',W:'u',ArrowDown:'d',s:'d',S:'d'};
+addEventListener('keydown',e=>{
+  const typing=/INPUT|TEXTAREA/.test((e.target&&e.target.tagName)||''); if(typing) return;
+  if(MAPK[e.key]){keys[MAPK[e.key]]=1; if(mode==='play') e.preventDefault();}
+  if(e.key==='e'||e.key==='E'||e.key===' '||e.key==='Enter'){ if(e.repeat) return; if(mode==='dialog'){e.preventDefault(); advance();} else if(mode==='play'&&near&&performance.now()>talkLock){e.preventDefault(); talk(near);} }
+});
+addEventListener('keyup',e=>{ if(MAPK[e.key]) keys[MAPK[e.key]]=0; });
+addEventListener('blur',()=>{for(const k in keys) keys[k]=0;});
+(function(){const st=$('#stick'),kn=$('#knob'); let pid=null;
+  const mv=e=>{const r=st.getBoundingClientRect(); let dx=(e.clientX-r.left-r.width/2)/(r.width/2), dy=(e.clientY-r.top-r.height/2)/(r.height/2); const l=Math.hypot(dx,dy); if(l>1){dx/=l;dy/=l;} joy.x=dx; joy.y=dy; kn.style.transform='translate('+dx*36+'px,'+dy*36+'px)';};
+  st.addEventListener('pointerdown',e=>{pid=e.pointerId; try{st.setPointerCapture(pid);}catch(_){} mv(e); e.preventDefault();});
+  st.addEventListener('pointermove',e=>{ if(e.pointerId===pid) mv(e); });
+  const up=e=>{ if(e.pointerId===pid){pid=null; joy.x=joy.y=0; kn.style.transform='';} };
+  st.addEventListener('pointerup',up); st.addEventListener('pointercancel',up);
+})();
+
+function blocked(x,z){
+  if(Math.abs(x)>102||Math.abs(z)>102) return true; const R=.55;
+  for(let i=0;i<L.col.length;i++){const c=L.col[i]; if(c.r!==undefined){const dx=x-c.x,dz=z-c.z,rr=c.r+R; if(dx*dx+dz*dz<rr*rr) return true;} else if(x>c.x0-R&&x<c.x1+R&&z>c.z0-R&&z<c.z1+R) return true;}
+  return false;
+}
+
+/* ---------- diálogo ---------- */
+let dlg=null, typer=null, near=null, talkLock=0;
+function say(lines,who,cb){ dlg={lines:lines.map(l=>typeof l==='string'?{s:who,t:l}:l),i:0,cb}; mode='dialog'; ui(); $('#dialog').hidden=false; showLine(); }
+function showLine(){ const l=dlg.lines[dlg.i], full=fmt(l.t), box=$('#dlgTxt'); $('#dlgWho').textContent=l.s; $('#dlgNext').textContent=dlg.i<dlg.lines.length-1?'Siguiente':'Listo';
+  clearInterval(typer); typer=null; if(reduce){box.textContent=full; return;}
+  let k=0; box.textContent=''; typer=setInterval(()=>{k+=2; box.textContent=full.slice(0,k); if(k>=full.length){clearInterval(typer); typer=null;}},22); dlg.full=full; }
+function advance(){ if(!dlg) return; sfx.tap();
+  if(typer){clearInterval(typer); typer=null; $('#dlgTxt').textContent=dlg.full; return;}
+  dlg.i++; if(dlg.i<dlg.lines.length){showLine(); return;}
+  const cb=dlg.cb; dlg=null; $('#dialog').hidden=true; mode='play'; talkLock=performance.now()+650; ui(); if(cb) cb(); }
+$('#dialog').addEventListener('click',advance);
+
+function toast(t){const e=$('#toast'); e.textContent=t; e.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>e.hidden=true,3200);}
+function banner(t){const e=$('#banner'); $('#banTxt').textContent=t; e.hidden=false; clearTimeout(banner.h); banner.h=setTimeout(()=>e.hidden=true,4200);}
+let zone=null;
+function zoneAt(){ if(Math.hypot(P.x,P.z)<19) return 'Plaza del Gran Mosaico'; const d=DISTRICTS.find(q=>Math.hypot(P.x-q.cx,P.z-q.cz)<27); return d?d.name:null; }
+function showZone(t){ const b=$('#locBand'); $('#locTxt').textContent=t; b.classList.add('show'); clearTimeout(showZone.h); showZone.h=setTimeout(()=>b.classList.remove('show'),2600); }
+
+/* ---------- conversación con personajes ---------- */
+function talk(a){
+  const n=a.n; sfx.tap();
+  if(n.id==='ceiba'){
+    if(!S.intro) return say(INTRO,n.name,()=>{S.intro=true; refresh(); save();});
+    if(S.final) return say(['Villa Mosaico brilla gracias a ti, {n}. Puedes seguir paseando y repasando con los vecinos cuando quieras.'],n.name,()=>showCert());
+    if(allDone()) return say(FINAL_LINES,n.name,openOath);
+    const left=DISTRICTS.filter(d=>!S.done[d.id]).map(d=>d.name);
+    return say(['Llevas '+(6-left.length)+' de 6 teselas, {n}. Todavía hay niebla en: '+left.join(', ')+'.','Sigue la flecha amarilla y mira el mapa de la esquina. Si olvidas algo, abre tu Cuaderno.'],n.name);
+  }
+  const D=DISTRICTS.find(d=>d.id===n.d);
+  if(n.role==='guide'){
+    const first=!S.guides[n.d];
+    return say(first?n.lesson:['¿Repasamos? Escucha de nuevo con atención.'].concat(n.lesson.slice(1)),n.name,()=>{ if(first){S.guides[n.d]=true; refresh(); save(); toast('Nuevo en tu Cuaderno: '+D.tema);} });
+  }
+  if(!S.guides[n.d]) return say(['Hola. Aquí pasan cosas raras desde que llegó la niebla. Primero habla con '+guideOf(n.d).name+', que te explicará todo.'],n.name);
+  if(S.solved[n.id]) return say([n.after],n.name);
+  say(n.intro,n.name,()=>openChallenge(n));
+}
+function solved(n,st){
+  S.solved[n.id]=st; const D=DISTRICTS.find(d=>d.id===n.d), all=retosOf(n.d).every(r=>S.solved[r.id]);
+  if(all) S.done[n.d]=true; refresh(); save();
+  const lines=[n.after];
+  if(all) lines.push({s:'Chigüi',t:DONE_LINES[n.d]});
+  say(lines,n.name,()=>{ if(all){ sfx.win(); banner(D.name+' recuperó su color'); if(allDone()) setTimeout(()=>toast('¡Tienes las seis teselas! Vuelve a la plaza con Doña Ceiba.'),4300); } });
+}
+
+/* ---------- retos ---------- */
+function shuffle(a){a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a;}
+function openChallenge(n){
+  const c=n.ch, card=$('#chCard'), D=DISTRICTS.find(d=>d.id===n.d); let tries=0;
+  mode='panel'; ui(); card.textContent=''; $('#vCh').hidden=false; card.scrollTop=0;
+  card.appendChild(el('p','eyebrow',D.name+' · '+n.name));
+  if(c.ctx) card.appendChild(el('div','ctx',c.ctx));
+  card.appendChild(el('h2','q',c.q));
+  const body=el('div'); card.appendChild(body);
+  const fb=el('div','fb'); fb.hidden=true; card.appendChild(fb);
+  const row=el('div','row'); card.appendChild(row);
+  const leave=el('button','btn alt','Volver después'); leave.onclick=()=>{$('#vCh').hidden=true; mode='play'; ui();}; row.appendChild(leave);
+  const hint=t=>{fb.className='fb hint'; fb.textContent='Pista: '+t; fb.hidden=false; sfx.bad(); card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');};
+  const win=()=>{ const st=tries===0?3:tries<=(c.type==='classify'?2:1)?2:1; sfx.ok();
+    fb.className='fb good'; fb.textContent='¡Correcto! '+c.why; fb.hidden=false; row.textContent='';
+    row.appendChild(el('span','stars','★'.repeat(st)+'☆'.repeat(3-st)));
+    const go=el('button','btn','Continuar'); go.onclick=()=>{$('#vCh').hidden=true; mode='play'; solved(n,st);}; row.appendChild(go); go.focus(); fb.scrollIntoView({block:'nearest'}); };
+  if(c.type==='quiz'){
+    const box=el('div','opts'); body.appendChild(box);
+    shuffle(c.opts.map((t,i)=>i)).forEach((oi,k)=>{const b=el('button','opt'); b.appendChild(el('b',null,'ABCD'[k])); b.appendChild(el('span',null,c.opts[oi]));
+      b.onclick=()=>{ if(oi===0){ b.classList.add('ok'); box.querySelectorAll('button').forEach(x=>x.disabled=true); win(); } else { b.classList.add('no'); b.disabled=true; tries++; hint(c.hint); } };
+      box.appendChild(b);});
+  }
+  if(c.type==='order'){
+    const slots=el('div','slots'), box=el('div','opts'); body.appendChild(slots); body.appendChild(box); let seq=[];
+    const draw=()=>{ slots.textContent=''; c.items.forEach((_,i)=>{const s=el('div','slot'+(seq[i]!=null?' full':'')); s.appendChild(el('b',null,(i+1)+'.º')); s.appendChild(el('span',null,seq[i]!=null?c.items[seq[i]]:'Toca una pieza')); slots.appendChild(s);});
+      box.querySelectorAll('button').forEach(b=>b.disabled=seq.indexOf(+b.dataset.i)>=0); };
+    shuffle(c.items.map((t,i)=>i)).forEach(oi=>{const b=el('button','opt'); b.dataset.i=oi; b.appendChild(el('span',null,c.items[oi]));
+      b.onclick=()=>{ sfx.tap(); seq.push(oi); draw(); if(seq.length===c.items.length){ if(seq.every((v,i)=>v===i)){ win(); } else { tries++; hint(c.hint); setTimeout(()=>{seq=[]; draw();},900); } } };
+      box.appendChild(b);});
+    draw();
+  }
+  if(c.type==='classify'){
+    const items=shuffle(c.items); let i=0;
+    const pr=el('div','prog'), bar=el('i'); pr.appendChild(bar); body.appendChild(pr);
+    const cnt=el('p','eyebrow'); cnt.style.marginTop='10px'; body.appendChild(cnt);
+    const it=el('div','item'); body.appendChild(it);
+    const cats=el('div','cats'); body.appendChild(cats);
+    const draw=()=>{ bar.style.width=(i/items.length*100)+'%'; if(i>=items.length){ it.hidden=cats.hidden=cnt.hidden=true; win(); return; } cnt.textContent='Tarjeta '+(i+1)+' de '+items.length; it.textContent=items[i][0]; };
+    c.cats.forEach((t,ci)=>{const b=el('button','opt',t); b.onclick=()=>{ if(items[i][1]===ci){ sfx.tap(); fb.hidden=true; i++; draw(); } else { tries++; hint('Esa tarjeta no va en «'+t+'». Léela otra vez con calma.'); } }; cats.appendChild(b);});
+    draw();
+  }
+}
+
+/* ---------- cuaderno ---------- */
+function openBook(){
+  const b=$('#bookBody'); b.textContent=''; $('#vBook h2').textContent='Cuaderno de '+S.name;
+  DISTRICTS.forEach((d,i)=>{const s=el('div','dsec'), h=el('h3'); const sw=el('i'); sw.style.background=S.done[d.id]?d.tint:'#c9ced8'; h.appendChild(sw); h.appendChild(el('span',null,(i+1)+'. '+d.name+' · '+d.tema)); s.appendChild(h);
+    if(!S.guides[d.id]) s.appendChild(el('p','dim','Aún no has hablado con '+guideOf(d.id).name+'.'));
+    else { const dl=el('dl'); guideOf(d.id).notes.concat(retosOf(d.id).filter(n=>S.solved[n.id]&&n.ch.note).map(n=>n.ch.note)).forEach(t=>{dl.appendChild(el('dt',null,t[0])); dl.appendChild(el('dd',null,t[1]));}); s.appendChild(dl);
+      const r=retosOf(d.id); s.appendChild(el('p','dim','Retos resueltos: '+r.filter(n=>S.solved[n.id]).length+' de '+r.length)); }
+    b.appendChild(s);});
+  mode='panel'; ui(); $('#vBook').hidden=false;
+}
+$('#btnBook').onclick=()=>{ if(mode==='play'){sfx.tap(); openBook();} };
+$('#bookClose').onclick=()=>{$('#vBook').hidden=true; mode='play'; ui();};
+$('#btnSnd').onclick=()=>{S.mute=!S.mute; refresh(); save(); sfx.tap();};
+
+/* ---------- juramento y diploma ---------- */
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function checkOath(){ const t=norm($('#oathTxt').value); let ok=true;
+  $('#oathChk').querySelectorAll('li').forEach(li=>{const k=li.dataset.k; let y;
+    if(k.indexOf('len:')===0) y=t.replace(/\s+/g,' ').length>=+k.slice(4);
+    else if(k.indexOf('n2:')===0) y=k.slice(3).split('|').filter(w=>t.indexOf(w)>=0).length>=2;
+    else if(k.indexOf('c2:')===0) y=k.slice(3).split('|').reduce((a,w)=>a+t.split(w).length-1,0)>=2;
+    else y=k.split('|').some(w=>t.indexOf(w)>=0);
+    li.classList.toggle('y',y); if(!y) ok=false;});
+  $('#oathOk').disabled=!ok; }
+function openOath(){ mode='panel'; ui(); $('#oathTxt').value=S.oath||''; checkOath(); $('#vOath').hidden=false; }
+$('#oathTxt').addEventListener('input',checkOath);
+$('#oathBack').onclick=()=>{S.oath=$('#oathTxt').value; save(); $('#vOath').hidden=true; mode='play'; ui();};
+$('#oathOk').onclick=()=>{S.oath=$('#oathTxt').value.trim(); S.final=true; refresh(); save(); $('#vOath').hidden=true; sfx.win(); showCert();};
+function showCert(){
+  const st=stars(), pct=st/MAXSTARS, fem=S.g==='Guardiana';
+  $('#certName').textContent=S.name;
+  $('#certRank').textContent=pct>=.9?(fem?'Gran Guardiana del Mosaico':'Gran Guardián del Mosaico'):pct>=.7?S.g+' del Mosaico':'Aprendiz del Mosaico';
+  $('#certStats').textContent='★ '+st+' de '+MAXSTARS+' estrellas · 6 de 6 teselas · '+RETOS.length+' retos resueltos';
+  $('#certOath').textContent=S.oath; $('#certDate').textContent='Villa Mosaico, '+new Date().toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'});
+  mode='panel'; ui(); $('#vCert').hidden=false;
+}
+$('#certClose').onclick=()=>{$('#vCert').hidden=true; mode='play'; ui();};
+
+/* ---------- título y creador ---------- */
+function swatches(host,list,get,set,asText){ host.textContent=''; list.forEach((v,i)=>{const b=el('button',asText?'txt':null,asText?v:null); if(!asText) b.style.background=v; b.type='button'; b.setAttribute('aria-label',asText?v:'Color '+(i+1));
+  const val=asText==='idx'?i:v; b.setAttribute('aria-pressed',String(get()===val)); b.onclick=()=>{set(val); sfx.tap(); host.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); buildPlayer();}; host.appendChild(b);}); }
+function openCreator(){
+  mode='creator'; $('#vTitle').hidden=true; $('#creator').hidden=false; P.x=0; P.z=7; P.rot=0; buildPlayer();
+  $('#inName').value=S.name;
+  swatches($('#swG'),['Guardián','Guardiana'],()=>S.g,v=>S.g=v,true);
+  swatches($('#swSkin'),SK,()=>S.look.skin,v=>S.look.skin=v);
+  swatches($('#swHair'),HR.slice(0,5),()=>S.look.hair,v=>S.look.hair=v);
+  swatches($('#swStyle'),STYLES,()=>S.look.style,v=>S.look.style=v,'idx');
+  swatches($('#swShirt'),SHIRTS,()=>S.look.shirt,v=>S.look.shirt=v);
+}
+$('#btnGo').onclick=()=>{ const nm=$('#inName').value.trim().replace(/[<>{}]/g,''); if(nm.length<2){ $('#crMsg').textContent='Escribe tu nombre para empezar.'; $('#inName').focus(); return; }
+  S.name=nm; $('#creator').hidden=true; sfx.ok(); startPlay(); };
+$('#btnStart').onclick=()=>{ sfx.tap(); if(hadSave&&S.name){ $('#vTitle').hidden=true; buildPlayer(); startPlay(); } else openCreator(); };
+let resetArmed=false;
+$('#btnReset').onclick=()=>{ if(!resetArmed){resetArmed=true; $('#btnReset').textContent='Toca otra vez para borrar tu avance'; return;} try{localStorage.removeItem(KEY);}catch(e){} S=fresh(); P.x=0; P.z=7; refresh(); openCreator(); };
+function startPlay(){ mode='play'; refresh(); save(); ui(); if(!S.intro) setTimeout(()=>{ if(mode==='play') talk(actors[0]); },700); }
+function ui(){ const p=mode==='play', g=mode!=='title'&&mode!=='creator'; if(!p) $('#locBand').classList.remove('show');
+  $('#hud').hidden=!g; $('#goal').hidden=!p; $('#mini').hidden=!g||mode==='panel'; $('#stick').hidden=!p; $('#keys').hidden=!p||!!S.intro&&Object.keys(S.guides).length>0; if(!p) $('#btnAct').hidden=true; }
+$('#btnAct').onclick=()=>{ $('#btnAct').blur(); if(mode==='play'&&near) talk(near); };
+
+/* ---------- objetivo y minimapa ---------- */
+function target(){
+  if(!S.intro) return {a:actors[0],t:'Habla con Doña Ceiba'};
+  let order=DISTRICTS.slice(); const here=DISTRICTS.find(d=>Math.hypot(P.x-d.cx,P.z-d.cz)<30&&!S.done[d.id]);
+  if(here) order=[here].concat(order.filter(d=>d!==here));
+  for(const d of order){ if(S.done[d.id]) continue;
+    if(!S.guides[d.id]){const n=guideOf(d.id); return {a:actors.find(a=>a.n===n),t:'Ve al '+artic(d.name)+' y habla con '+n.name};}
+    const n=retosOf(d.id).find(r=>!S.solved[r.id]); return {a:actors.find(a=>a.n===n),t:'Ayuda a '+n.name}; }
+  if(!S.final) return {a:actors[0],t:'Vuelve a la plaza y habla con Doña Ceiba'};
+  return null;
+}
+const artic=n=>n.replace(/^(Plaza|Vereda|Estación|Avenida)/,m=>'#'+m).replace(/^#/,'').replace(/^(Barrio|Parque)/,'$1');
+function goalText(d){ return /^(Plaza|Vereda|Estación|Avenida|Feria|Reserva)/.test(d)?'Ve a la '+d:'Ve al '+d; }
+const mini=$('#mini'), mx=mini.getContext('2d'); let miniT=0, tgt=null;
+function drawMini(){
+  const W=240,k=W/220,c=v=>(v+110)*k; mx.clearRect(0,0,W,W); mx.fillStyle='#e7edf7'; mx.fillRect(0,0,W,W);
+  mx.strokeStyle='#b9c1d1'; mx.lineWidth=5; ROADS.forEach(s=>{mx.beginPath(); mx.moveTo(c(s[0]),c(s[1])); mx.lineTo(c(s[2]),c(s[3])); mx.stroke();});
+  mx.fillStyle='#fff'; mx.strokeStyle='#1b2a4a'; mx.lineWidth=3; mx.beginPath(); mx.arc(c(0),c(0),12,0,7); mx.fill(); mx.stroke();
+  DISTRICTS.forEach((d,i)=>{mx.beginPath(); mx.arc(c(d.cx),c(d.cz),19,0,7); mx.fillStyle=S.done[d.id]?d.tint:'#c9ced8'; mx.fill(); mx.stroke(); mx.fillStyle='#1b2a4a'; mx.font='800 22px Arial, sans-serif'; mx.textAlign='center'; mx.textBaseline='middle'; mx.fillText(i+1,c(d.cx),c(d.cz)+1);});
+  if(tgt){mx.strokeStyle='#ffb703'; mx.lineWidth=5; mx.beginPath(); mx.arc(c(tgt.a.n.x),c(tgt.a.n.z),9+Math.sin(clock*5)*3,0,7); mx.stroke();}
+  mx.fillStyle='#e5484d'; mx.strokeStyle='#fff'; mx.lineWidth=3; mx.beginPath(); mx.arc(c(P.x),c(P.z),7,0,7); mx.fill(); mx.stroke();
+}
+
+/* ---------- bucle ---------- */
+let clock=0, last=performance.now(); const camPos=new THREE.Vector3(0,26,40), camLook=new THREE.Vector3(0,2,0), v3=new THREE.Vector3();
+function resize(){ const w=innerWidth,h=innerHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+addEventListener('resize',resize);
+function lerpAng(a,b,t){let d=((b-a+Math.PI)%(Math.PI*2)+Math.PI*2)%(Math.PI*2)-Math.PI; return a+d*t;}
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000); last=now; clock+=dt;
+  /* jugador */
+  let ix=0,iz=0; if(mode==='play'){ ix=(keys.r?1:0)-(keys.l?1:0)+joy.x; iz=(keys.d?1:0)-(keys.u?1:0)+joy.y; }
+  const len=Math.hypot(ix,iz); if(len>1){ix/=len;iz/=len;}
+  if(len>.12){ const sp2=10, nx=P.x+ix*sp2*dt, nz=P.z+iz*sp2*dt; if(!blocked(nx,P.z)) P.x=nx; if(!blocked(P.x,nz)) P.z=nz; P.rot=lerpAng(P.rot,Math.atan2(ix,iz),Math.min(1,dt*12)); P.t+=dt*11; }
+  if(player){ player.position.set(P.x,len>.12?Math.abs(Math.sin(P.t))*.08:0,P.z); player.rotation.y=mode==='creator'?Math.sin(clock*.8)*.5:P.rot; swing(player,P.t,len>.12?.75:0); }
+  /* chigüi */
+  if(chigui){ const tx=P.x-Math.sin(P.rot)*1.7+.6, tz=P.z-Math.cos(P.rot)*1.7, dx=tx-chigui.position.x, dz=tz-chigui.position.z, d=Math.hypot(dx,dz);
+    if(d>.35){ const f=Math.min(1,dt*(d>12?30:4.5)); chigui.position.x+=dx*f; chigui.position.z+=dz*f; chigui.rotation.y=lerpAng(chigui.rotation.y,Math.atan2(dx,dz),Math.min(1,dt*10)); chigui.position.y=Math.abs(Math.sin(clock*12))*.12; } else chigui.position.y=0;
+    chigui.visible=mode!=='title'&&mode!=='creator'; }
+  /* vecinos */
+  near=null; let nd=3.4;
+  actors.forEach(a=>{const dx=P.x-a.n.x,dz=P.z-a.n.z,d=Math.hypot(dx,dz); if(d<nd){nd=d;near=a;}
+    a.g.rotation.y=lerpAng(a.g.rotation.y,d<9?Math.atan2(dx,dz):0,Math.min(1,dt*5)); a.g.userData.armL.rotation.z=Math.sin(clock*1.6+a.ph)*.06; a.g.userData.head.rotation.z=Math.sin(clock*1.1+a.ph)*.04; a.mk.position.y=3.95+Math.sin(clock*3+a.ph)*.12;});
+  if(mode==='play'){ const b=$('#btnAct'); if(near){ const t='Hablar con '+near.n.name; if(b.textContent!==t) b.textContent=t; b.hidden=false; } else b.hidden=true; }
+  /* carros */
+  cars.forEach(c=>{const g=c.g, ahead=(P.x-g.position.x)*c.dir, stop=Math.abs(P.z-g.position.z)<4.2&&ahead>-2.5&&ahead<9; c.v+=((stop?0:9)-c.v)*Math.min(1,dt*6); g.position.x+=c.dir*c.v*dt; if(g.position.x>44) g.position.x=-44; if(g.position.x<-44) g.position.x=44; g.rotation.y=c.dir>0?0:Math.PI;});
+  clouds.forEach(c=>{c.position.x+=dt*1.2; if(c.position.x>190) c.position.x=-190;});
+  smoke.forEach(s=>{const t=(clock*.18+s.ph)%1; s.m.position.set(s.x+t*1.6,5+t*5,s.z-t*.6); s.m.scale.setScalar(.6+t*1.6); s.m.material.opacity=.7*(1-t); });
+  flags.forEach((f,k)=>{f.rotation.y=Math.sin(clock*2+k)*.18;});
+  /* color */
+  let tot=0; for(const k in TG){const G=TG[k]; if(Math.abs(G.t-G.f)>.001){G.f+=(G.t-G.f)*Math.min(1,dt*1.4); applyTint(G);} if(k!=='all') tot+=G.f;}
+  scene.background.copy(SKY_G).lerp(SKY_C,tot/6); scene.fog.color.copy(scene.background);
+  /* cámara */
+  const port=camera.aspect<.9?1.32:1;
+  if(mode==='title'){ v3.set(Math.sin(clock*.12)*46,24,Math.cos(clock*.12)*46); camPos.lerp(v3,1-Math.exp(-dt*3)); camLook.set(0,3,0); }
+  else if(mode==='creator'){ const wide=innerWidth>720; v3.set(P.x+(wide?1.9:0),2.3,P.z+(wide?6.2:8)); camPos.lerp(v3,1-Math.exp(-dt*7)); camLook.set(P.x+(wide?1.9:0),wide?1.25:-.2,P.z); }
+  else { v3.set(P.x,15.5*port,P.z+14.5*port); camPos.lerp(v3,1-Math.exp(-dt*7)); camLook.set(P.x,1.4,P.z-1.2); }
+  camera.position.copy(camPos); camera.lookAt(camLook);
+  /* objetivo */
+  if(mode==='play'){ miniT-=dt; if(miniT<=0){ miniT=.12; tgt=target(); const gt=$('#goalTxt'), ar=$('#goalArrow');
+      if(!tgt){ gt.textContent='¡Villa Mosaico está a salvo! Pasea libremente.'; ar.style.visibility='hidden'; }
+      else { const dx=tgt.a.n.x-P.x,dz=tgt.a.n.z-P.z,d=Math.hypot(dx,dz); const dd=DISTRICTS.find(q=>q.id===tgt.a.n.d);
+        let t=tgt.t; if(dd&&tgt.a.n.role==='guide') t=goalText(dd.name)+' y habla con '+tgt.a.n.name;
+        t+=d>6?' · '+Math.round(d)+' m':''; if(gt.textContent!==t) gt.textContent=t; ar.style.visibility='visible'; ar.style.transform='rotate('+Math.atan2(dx,-dz)+'rad)'; }
+      drawMini(); const zn=zoneAt(); if(zn!==zone){ zone=zn; if(zn) showZone(zn); } } }
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- arranque ---------- */
+function init(){
+  buildWorld(); buildActors(); buildPlayer(); player.visible=true;
+  if(blocked(P.x,P.z)){ P.x=0; P.z=7; }
+  for(const k in TG){ TG[k].f=-1; }
+  refresh(); for(const k in TG){ TG[k].f=TG[k].t; applyTint(TG[k]); }
+  if(hadSave){ $('#btnStart').textContent='Continuar como '+S.name; $('#btnReset').hidden=false; }
+  resize(); ui(); requestAnimationFrame(frame);
+  window.__mosaico={get S(){return S;},P,actors,talk,get mode(){return mode;}};
+}
+let started=false; const go=()=>{ if(!started){started=true; init();} };
+if(document.fonts&&document.fonts.ready){ document.fonts.ready.then(go); setTimeout(go,1500); } else go();
+})();
+
+</script>
+</body>
+</html>
